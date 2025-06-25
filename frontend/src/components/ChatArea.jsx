@@ -27,7 +27,6 @@ function ChatArea({ roomCode, username }) {
 
     return (
         <div className="flex-1 flex flex-col p-4">
-            {/* Message List Area */}
             <div className="flex-1 overflow-y-auto space-y-3 px-4 py-4 
                 rounded-2xl 
                 bg-gradient-to-br from-white/20 via-white/10 to-white/5 
@@ -41,7 +40,6 @@ function ChatArea({ roomCode, username }) {
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input and Send Button */}
             <div className="mt-4 px-2 flex-shrink-0 w-full max-w-full">
                 <div className="flex gap-3 flex-wrap w-full
                     bg-white/40 dark:bg-white/10 
@@ -75,7 +73,6 @@ function ChatArea({ roomCode, username }) {
                 </div>
             </div>
 
-            {/* Scrollbar Style */}
             <style jsx='true'>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 6px;
