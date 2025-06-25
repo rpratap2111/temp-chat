@@ -17,7 +17,7 @@ export const SocketProvider = ({ children }) => {
     const [isConnected, setIsConnected] = useState(false);
     const socketRef = useRef(null);
 
-    const SOCKET_URL = 'http://localhost:4000';
+    const SOCKET_URL = 'https://temp-chat-app-hrmz.onrender.com';
 
     const connectSocket = (roomCode, username) => {
         if (socketRef.current) {
