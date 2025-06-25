@@ -15,7 +15,7 @@ const server = http.createServer(app);
 
 const io = socketIo(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' ? false : process.env.VITE_URL,
+    origin: process.env.VITE_URL,
     methods: ['GET', 'POST'],
     credentials: true
   }
