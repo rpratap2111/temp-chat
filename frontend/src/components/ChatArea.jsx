@@ -27,6 +27,7 @@ function ChatArea({ roomCode, username }) {
 
     return (
         <div className="flex-1 flex flex-col p-4">
+            {/* Message List Area */}
             <div className="flex-1 overflow-y-auto space-y-3 px-4 py-4 
                 rounded-2xl 
                 bg-gradient-to-br from-white/20 via-white/10 to-white/5 
@@ -35,31 +36,32 @@ function ChatArea({ roomCode, username }) {
                 shadow-lg
                 border border-white/30 
                 transition-all duration-500
-                max-h-[calc(100vh-200px)]
-                min-h-0
-                custom-scrollbar">
+                min-h-0 custom-scrollbar">
                 <MessageList messages={messages} currentUsername={username} />
                 <div ref={messagesEndRef} />
             </div>
 
-            <div className="mt-4 px-2 flex-shrink-0">
-                <div className="flex gap-3 
+            {/* Input and Send Button */}
+            <div className="mt-4 px-2 flex-shrink-0 w-full max-w-full">
+                <div className="flex gap-3 flex-wrap w-full
                     bg-white/40 dark:bg-white/10 
                     backdrop-blur-lg 
                     p-3 
                     rounded-xl 
                     border border-white/20">
+                    
                     <input
                         type="text"
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyDown={handleKeyPress}
                         placeholder="Type your message..."
-                        className="flex-1 px-4 py-2 bg-transparent border-none 
+                        className="flex-1 min-w-0 px-4 py-2 bg-transparent border-none 
                             text-black dark:text-white 
                             placeholder-gray-500 dark:placeholder-gray-400 
                             focus:outline-none"
                     />
+
                     <button
                         onClick={handleSendMessage}
                         className="bg-blue-600 hover:bg-blue-700 text-white 
@@ -73,7 +75,8 @@ function ChatArea({ roomCode, username }) {
                 </div>
             </div>
 
-            <style jsx = 'true'>{`
+            {/* Scrollbar Style */}
+            <style jsx='true'>{`
                 .custom-scrollbar::-webkit-scrollbar {
                     width: 6px;
                 }
@@ -87,7 +90,6 @@ function ChatArea({ roomCode, username }) {
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
                     background: rgba(59, 130, 246, 0.7);
                 }
-                /* Firefox */
                 .custom-scrollbar {
                     scrollbar-width: thin;
                     scrollbar-color: rgba(59, 130, 246, 0.5) transparent;
