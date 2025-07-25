@@ -20,10 +20,10 @@ A real-time chat application built with **React (Vite)** on the frontend and **E
 ## 📸 Screenshots
 
 ### 🔑 Join / Create Room
-![Join Room](./screenshots/join-room.png)
+<img width="1483" height="810" alt="Screenshot 2025-07-21 195518" src="https://github.com/user-attachments/assets/947d4801-9624-4405-ace3-f4b292995a9e" />
 
 ### 💬 Chat Interface
-![Chat Room](./screenshots/chat-room.png)
+<img width="1726" height="917" alt="Screenshot 2025-07-21 195638" src="https://github.com/user-attachments/assets/64c7ac52-1d41-466b-8c77-495cf657c4e2" />
 
 ---
 
