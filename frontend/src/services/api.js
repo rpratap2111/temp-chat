@@ -1,48 +1,33 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'https://temp-chat-ixiv.onrender.com/api';
+import { SERVER_URL } from '../config';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${SERVER_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-export const createRoom = async (username, roomCode) => {
-  if (!username?.trim() || !roomCode?.trim()) {
-    throw new Error("Username and Room Code are required");
-  }
+const errorMessage = (error) =>
+  error.response?.data?.message || 'Network Error. Please try again.';
 
+// Creates a room. The server picks the code and returns the host's secret token.
+export const createRoom = async ({ lifetimeMinutes, endPolicy, password }) => {
   try {
-    const response = await api.post('/rooms', {
-      username: username.trim(),
-      roomCode: roomCode.trim().toUpperCase(),
-    });
-
+    const response = await api.post('/rooms', { lifetimeMinutes, endPolicy, password });
     return response.data;
   } catch (error) {
     console.error('Error creating room:', error);
-
-    const msg =
-      error.response?.data?.message || 'Network Error. Please try again.';
-    throw new Error(msg);
+    throw new Error(errorMessage(error));
   }
 };
 
-export const checkRoom = async (roomCode) => {
-  if (!roomCode?.trim()) {
-    throw new Error("Room Code is required");
-  }
-
+// Looks up whether a room exists and whether it needs a password.
+export const getRoomInfo = async (roomCode) => {
   try {
-    const response = await api.get(`/rooms/${roomCode.trim().toUpperCase()}`);
-    return response.data;
+    const response = await api.get(`/rooms/${encodeURIComponent(roomCode)}`);
+    return response.data.room;
   } catch (error) {
-    console.error('Error checking room:', error);
-
-    const msg =
-      error.response?.data?.message || 'Network Error. Please try again.';
-    throw new Error(msg);
+    throw new Error(errorMessage(error));
   }
 };

@@ -1,87 +1,83 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, LogOut } from 'lucide-react';
+import { Users, LogOut, Menu, QrCode, Settings, Lock } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import Header from './Header';
 import ChatArea from './ChatArea';
 import UsersSidebar from './UsersSidebar';
 import Mode from './Mode';
+import Countdown from './Countdown';
+import InviteModal from './InviteModal';
+import HostPanel from './HostPanel';
 
-function Room({ roomData, onNavigateToHome }) {
-  const { connectSocket, disconnectSocket, joinRoom } = useSocket();
+const ERROR_DISPLAY_MS = 4000;
+
+// Join failures where retrying the same invite makes sense.
+const RETRYABLE_ERRORS = new Set(['bad_password', 'name_taken', 'rate_limited', 'host_present', 'locked']);
+
+function Room({ session, onLeave, onClosed }) {
+  const { connectSocket, disconnectSocket, leaveRoom, getPinnedMessages, room, me, isConnected } = useSocket();
   const [error, setError] = useState('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showMobileUsers, setShowMobileUsers] = useState(false);
-  const [isLeavingRoom, setIsLeavingRoom] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [showHostPanel, setShowHostPanel] = useState(false);
   const menuRef = useRef(null);
   const usersRef = useRef(null);
 
   useEffect(() => {
-    const newSocket = connectSocket(roomData.roomCode, roomData.username);
+    let cancelled = false;
 
-    if (!newSocket) {
-      setError("Failed to connect to server.");
-      return;
-    }
-
-    newSocket.on('roomClosed', (data) => {
-      alert(data.message);
-      handleLeaveRoom();
-    });
-
-    newSocket.on('error', (error) => {
-      setError(error.message);
-    });
-
-    newSocket.on('roomError', (error) => {
-      setError(error.message);
-      setTimeout(() => {
-        onNavigateToHome();
-      }, 2000);
-    });
+    connectSocket(session)
+      .then((socket) => {
+        if (cancelled) {
+          socket.disconnect();
+          return;
+        }
+        socket.on('roomError', (data) => {
+          onLeave(data.message, { keepInvite: RETRYABLE_ERRORS.has(data.code) });
+        });
+        socket.on('kicked', (data) => onLeave(data.message));
+        socket.on('roomClosed', (data) => {
+          onClosed({ message: data.message, roomCode: session.roomCode, pinned: getPinnedMessages() });
+        });
+        // Anything else (e.g. a message that failed to send) is shown in place.
+        socket.on('error', (data) => setError(data.message));
+      })
+      .catch(() => onLeave('This invite link is not valid.'));
 
     return () => {
+      cancelled = true;
       disconnectSocket();
     };
-  }, [roomData.roomCode, roomData.username]);
+  }, [session, connectSocket, disconnectSocket, getPinnedMessages, onLeave, onClosed]);
+
+  useEffect(() => {
+    if (!error) return undefined;
+    const timer = setTimeout(() => setError(''), ERROR_DISPLAY_MS);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (isLeavingRoom) return;
-
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setShowMobileMenu(false);
-      }
-      if (usersRef.current && !usersRef.current.contains(event.target)) {
-        setShowMobileUsers(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(event.target)) setShowMobileMenu(false);
+      if (usersRef.current && !usersRef.current.contains(event.target)) setShowMobileUsers(false);
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isLeavingRoom]);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const handleLeaveRoom = async () => {
-    setIsLeavingRoom(true);
-    await new Promise(resolve => setTimeout(resolve, 2500));
-
-    disconnectSocket();
-    onNavigateToHome();
+  const handleLeaveRoom = () => {
+    if (me?.isHost && room?.endPolicy === 'host_leaves'
+      && !window.confirm('You are the host. Leaving will close the room for everyone. Leave anyway?')) {
+      return;
+    }
+    leaveRoom();
+    onLeave();
   };
 
-  const toggleMobileMenu = () => {
-    if (isLeavingRoom) return;
-
-    setShowMobileMenu(!showMobileMenu);
-    setShowMobileUsers(false);
-  };
-
-  const toggleMobileUsers = () => {
-    if (isLeavingRoom) return;
-
-    setShowMobileUsers(!showMobileUsers);
+  const openMenuItem = (open) => {
     setShowMobileMenu(false);
+    open(true);
   };
 
   return (
@@ -89,92 +85,75 @@ function Room({ roomData, onNavigateToHome }) {
 
       <div className="flex-shrink-0 hidden lg:block">
         <Header
-          roomCode={roomData.roomCode}
-          username={roomData.username}
+          roomCode={session.roomCode}
+          username={session.username}
+          onInvite={() => setShowInvite(true)}
+          onHostControls={() => setShowHostPanel(true)}
           onLeaveRoom={handleLeaveRoom}
         />
       </div>
 
-      <div className="flex-shrink-0 lg:hidden bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 relative z-40">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Room: {roomData.roomCode}
+      <div className="flex-shrink-0 lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 relative z-40">
+        <div className="flex items-center justify-between px-4 py-3 gap-2">
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              Room {session.roomCode}
+              {room?.locked && <Lock size={12} aria-label="Locked" />}
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Welcome, {roomData.username}
+            <span className="flex items-center gap-2 mt-0.5">
+              <Countdown expiresAt={room?.expiresAt} />
+              {!isConnected && <span className="text-xs text-amber-600 dark:text-amber-400">Reconnecting…</span>}
             </span>
           </div>
 
+          <div className="flex items-center space-x-2">
+            <Mode className="" />
 
-          <div className="flex items-center space-x-3">
             <div className="relative" ref={usersRef}>
               <button
-                onClick={toggleMobileUsers}
+                onClick={() => { setShowMobileUsers((open) => !open); setShowMobileMenu(false); }}
                 className="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors shadow-md"
+                aria-label="Show people in the room"
               >
                 <Users className="w-5 h-5" />
               </button>
 
               {showMobileUsers && (
-                <div className="absolute right-0 top-full mt-2 w-72 max-h-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[60] overflow-hidden transform transition-all duration-200 ease-out">
-                  <div className="p-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-600">
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center justify-center">
-                      <Users className="w-4 h-4 mr-2" />
-                      Online Users
-                    </h3>
-                  </div>
-                  <div className="flex items-center justify-center p-4 w-full">
-                    <div className="w-full max-w-xs">
-                      <UsersSidebar isMobile={true} />
-                    </div>
-                  </div>
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[60] overflow-hidden">
+                  <UsersSidebar isMobile />
                 </div>
               )}
             </div>
 
             <div className="relative" ref={menuRef}>
               <button
-                onClick={toggleMobileMenu}
+                onClick={() => { setShowMobileMenu((open) => !open); setShowMobileUsers(false); }}
                 className="p-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition-colors shadow-md"
+                aria-label="Open menu"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                <Menu className="w-5 h-5" />
               </button>
 
               {showMobileMenu && (
-                <div className={`absolute right-0 top-full mt-2 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[60] overflow-hidden transform transition-all duration-200 ease-out ${isLeavingRoom ? 'pointer-events-none' : ''}`}>
-                  <div className="py-2">
-                    <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold mr-3">
-                          {roomData.username.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-700 dark:text-gray-300">{roomData.username}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Current User</div>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleLeaveRoom}
-                      disabled={isLeavingRoom}
-                      className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLeavingRoom ? (
-                        <>
-                          <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-red-600 border-t-transparent"></div>
-                          Leaving Room...
-                        </>
-                      ) : (
-                        <>
-                          <LogOut className="w-4 h-4 mr-2" />
-                          Leave Room
-                        </>
-                      )}
-                    </button>
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[60] overflow-hidden py-2">
+                  <div className="px-4 py-3 text-sm border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                    <div className="font-medium text-gray-700 dark:text-gray-300">{session.username}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{me?.isHost ? 'Host' : 'Guest'}</div>
                   </div>
+                  <button onClick={() => openMenuItem(setShowInvite)}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                    <QrCode className="w-4 h-4 mr-2" /> Invite people
+                  </button>
+                  {me?.isHost && (
+                    <button onClick={() => openMenuItem(setShowHostPanel)}
+                      className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
+                      <Settings className="w-4 h-4 mr-2" /> Host controls
+                    </button>
+                  )}
+                  <button onClick={handleLeaveRoom}
+                    className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">
+                    <LogOut className="w-4 h-4 mr-2" /> Leave room
+                  </button>
                 </div>
               )}
             </div>
@@ -189,21 +168,18 @@ function Room({ roomData, onNavigateToHome }) {
       )}
 
       <div className="flex-1 flex max-w-6xl mx-auto w-full animate-fadein min-h-0 overflow-hidden">
-        <ChatArea roomCode={roomData.roomCode} username={roomData.username} />
+        <ChatArea />
         <div className="hidden lg:block">
           <UsersSidebar />
         </div>
       </div>
 
-      <style>{`
-        @keyframes fadeIn {
-          0% { opacity: 0; transform: translateY(20px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadein {
-          animation: fadeIn 0.7s ease-in-out;
-        }
-      `}</style>
+      {showInvite && (
+        <InviteModal session={session} requiresPassword={room?.requiresPassword} onClose={() => setShowInvite(false)} />
+      )}
+      {showHostPanel && me?.isHost && (
+        <HostPanel onClose={() => setShowHostPanel(false)} />
+      )}
     </div>
   );
 }

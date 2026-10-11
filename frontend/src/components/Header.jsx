@@ -1,58 +1,60 @@
-import React, { useState } from 'react';
-import { MessageCircle, Copy, Check, LogOut } from 'lucide-react';
+import React from 'react';
+import { MessageCircle, LogOut, QrCode, Settings, Lock, ShieldCheck } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
+import Mode from './Mode';
+import Countdown from './Countdown';
 
-function Header({ roomCode, username, onLeaveRoom }) {
-    const [copied, setCopied] = useState(false);
-    const [isLeaving, setIsLeaving] = useState(false);
-
-    const handleCopyRoomCode = () => {
-        navigator.clipboard.writeText(roomCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    const handleLeaveClick = () => {
-        setIsLeaving(true);
-        setTimeout(() => {
-            onLeaveRoom();
-        }, 2500);
-    };
+function Header({ roomCode, username, onInvite, onHostControls, onLeaveRoom }) {
+    const { room, me, isConnected } = useSocket();
 
     return (
         <div className="w-full flex justify-center mt-4 px-2">
-            <div className="w-full max-w-280 flex items-center justify-between px-6 py-4 rounded-2xl shadow-md backdrop-blur-lg bg-white/30 dark:bg-white/10 border border-white/20 transition-colors duration-300">
+            <div className="w-full max-w-6xl flex items-center justify-between px-6 py-4 rounded-2xl shadow-md backdrop-blur-lg bg-white/30 dark:bg-white/10 border border-white/20 transition-colors duration-300">
                 <div className="flex items-center gap-3">
                     <MessageCircle className="text-blue-600 dark:text-blue-400" size={28} />
                     <div>
-                        <h1 className="text-lg font-bold text-gray-800 dark:text-white">
-                            Room: {roomCode}
+                        <h1 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                            Room {roomCode}
+                            {room?.locked && <Lock size={16} className="text-amber-600" aria-label="Locked" />}
+                            <Countdown expiresAt={room?.expiresAt} />
                         </h1>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                            Welcome, {username}
+                        <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                            {username}{me?.isHost && ' (host)'}
+                            <span className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
+                                <ShieldCheck size={12} /> End-to-end encrypted
+                            </span>
+                            {!isConnected && <span className="text-xs text-amber-600 dark:text-amber-400">Reconnecting…</span>}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleCopyRoomCode}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl shadow transition duration-200"
-                    >
-                        {copied ? <Check size={16} /> : <Copy size={16} />}
-                        {copied ? 'Copied!' : 'Copy Code'}
-                    </button>
+                    <Mode className="" />
 
                     <button
-                        onClick={handleLeaveClick}
-                        disabled={isLeaving}
-                        className={`flex items-center gap-2 px-4 py-2 font-medium rounded-xl shadow transition duration-200 ${
-                            isLeaving
-                                ? 'bg-red-400/60 text-white cursor-wait'
-                                : 'bg-red-500 hover:bg-red-600 text-white'
-                        }`}
+                        onClick={onInvite}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl shadow transition duration-200"
+                    >
+                        <QrCode size={16} />
+                        Invite
+                    </button>
+
+                    {me?.isHost && (
+                        <button
+                            onClick={onHostControls}
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-xl shadow transition duration-200"
+                        >
+                            <Settings size={16} />
+                            Host
+                        </button>
+                    )}
+
+                    <button
+                        onClick={onLeaveRoom}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl shadow transition duration-200"
                     >
                         <LogOut size={16} />
-                        {isLeaving ? 'Leaving...' : 'Leave'}
+                        Leave
                     </button>
                 </div>
             </div>
