@@ -28,3 +28,106 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(59, 130, 246, 0.7);
 }
+
+/* ---- Chat ---------------------------------------------------------------- */
+
+/* Subtle dotted wallpaper behind the messages. */
+.chat-wallpaper {
+  background-color: rgb(241 245 249 / 0.55);
+  background-image: radial-gradient(rgb(99 102 241 / 0.13) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+.dark .chat-wallpaper {
+  background-color: rgb(15 23 42 / 0.55);
+  background-image: radial-gradient(rgb(148 163 184 / 0.09) 1px, transparent 1px);
+}
+
+/* New messages pop in from their own side. */
+@keyframes msg-in {
+  0% { opacity: 0; transform: translateY(10px) scale(0.92); }
+  60% { opacity: 1; transform: translateY(-2px) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-msg-in-left { animation: msg-in 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2); transform-origin: bottom left; }
+.animate-msg-in-right { animation: msg-in 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2); transform-origin: bottom right; }
+
+/* System notices fade in quietly. */
+@keyframes notice-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-notice-in { animation: notice-in 0.25s ease-out; }
+
+/* Ticks pop when their status changes. */
+@keyframes tick-pop {
+  0% { transform: scale(0.3); opacity: 0; }
+  70% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-tick-pop { animation: tick-pop 0.3s ease-out; }
+
+/* Three bouncing dots for "is typing". */
+@keyframes typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.typing-dot { animation: typing-dot 1.2s infinite ease-in-out; }
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+/* Pulsing ring on the "jump to latest" button when new messages arrive. */
+@keyframes soft-ping {
+  0% { box-shadow: 0 0 0 0 rgb(99 102 241 / 0.5); }
+  100% { box-shadow: 0 0 0 12px rgb(99 102 241 / 0); }
+}
+.animate-soft-ping { animation: soft-ping 1.4s ease-out infinite; }
+
+/* Bubble tails: a small triangle on the first bubble of a run. */
+.bubble-tail-left::before,
+.bubble-tail-right::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 14px;
+  background: inherit;
+}
+.bubble-tail-left::before {
+  left: -7px;
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+.bubble-tail-right::before {
+  right: -7px;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-msg-in-left,
+  .animate-msg-in-right,
+  .animate-notice-in,
+  .animate-tick-pop,
+  .animate-soft-ping,
+  .typing-dot,
+  .animate-fadein { animation: none; }
+}
+
+/* "is typing..." ellipsis: the dots light up one after another. */
+@keyframes ellipsis-dot {
+  0%, 20% { opacity: 0; }
+  40%, 100% { opacity: 1; }
+}
+.typing-ellipsis span { animation: ellipsis-dot 1.2s infinite; opacity: 0; }
+.typing-ellipsis span:nth-child(2) { animation-delay: 0.2s; }
+.typing-ellipsis span:nth-child(3) { animation-delay: 0.4s; }
+
+/* The typing bubble breathes gently while someone types. */
+@keyframes typing-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.animate-typing-breathe { animation: typing-breathe 1.6s ease-in-out infinite; transform-origin: bottom left; }
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-ellipsis span { animation: none; opacity: 1; }
+  .animate-typing-breathe { animation: none; }
+}

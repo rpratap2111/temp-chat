@@ -19,13 +19,20 @@ const {
 } = require('../utils/constants');
 
 const messageLimiter = createRateLimiter(MESSAGE_RATE);
+
+// Delivery status of a message, in the order it can only move forward.
+const STATUS_RANK = { sent: 0, delivered: 1, read: 2 };
+const CLIENT_ID_REGEX = /^[A-Za-z0-9_-]{1,40}$/;
+const MAX_RECEIPT_IDS = 200;
 const joinFailLimiter = createRateLimiter(JOIN_FAIL_RATE);
 
 // Shape a stored message for the client. Ciphertext is passed through as-is;
 // only browsers holding the room key can read it.
-function toClientMessage(doc) {
+function toClientMessage(doc, { status = 'sent', clientId } = {}) {
   const createdAt = new Date(doc.createdAt);
   return {
+    clientId,
+    status,
     id: String(doc._id),
     username: doc.username,
     messageType: doc.messageType,
@@ -75,6 +82,9 @@ function socketHandler(io) {
         members: new Map(),
         banned: new Set(),
         burnTimers: new Set(),
+        // message id -> { recipients, delivered, read, status }. Kept in memory
+        // only; ticks restart at "sent" if the server restarts.
+        receipts: new Map(),
         expiryTimer: null,
         closing: false,
         settings: {
@@ -130,6 +140,34 @@ function socketHandler(io) {
     sock.disconnect(true);
   }
 
+  // Works out a message's status from the people it was sent to who are still
+  // in the room: delivered once all of them received it, read once all of them
+  // saw it. Status only moves forward, and every change is broadcast.
+  function evaluateReceipt(rCode, state, id, receipt) {
+    const recipients = [...receipt.recipients].filter((name) => state.members.has(name));
+    if (!recipients.length) return;
+    let next = 'sent';
+    if (recipients.every((name) => receipt.read.has(name))) next = 'read';
+    else if (recipients.every((name) => receipt.delivered.has(name))) next = 'delivered';
+    if (STATUS_RANK[next] <= STATUS_RANK[receipt.status]) return;
+    receipt.status = next;
+    io.to(rCode).emit('messageStatus', { id, status: next });
+  }
+
+  function recordReceipts(socket, ids, kind) {
+    const rCode = socket.data.roomCode;
+    const state = rCode && activeRooms.get(rCode);
+    const username = socket.data.username;
+    if (!state || !Array.isArray(ids)) return;
+    for (const id of ids.slice(0, MAX_RECEIPT_IDS)) {
+      const receipt = typeof id === 'string' && state.receipts.get(id);
+      if (!receipt || !receipt.recipients.has(username)) continue;
+      receipt.delivered.add(username);
+      if (kind === 'read') receipt.read.add(username);
+      evaluateReceipt(rCode, state, id, receipt);
+    }
+  }
+
   // Tears a room down for everyone: notify, disconnect, then delete.
   // The in-memory entry is removed first so the disconnect handlers fired by
   // sock.disconnect() below find no room and do nothing.
@@ -167,6 +205,7 @@ function socketHandler(io) {
 
     clearTimeout(member.leaveTimer);
     state.members.delete(username);
+    for (const [id, receipt] of state.receipts) evaluateReceipt(rCode, state, id, receipt);
 
     if (member.isHost && state.settings.endPolicy === 'host_leaves') {
       await closeRoom(rCode, `The host ${action} the chat. The room is now closed.`, 'host_left');
@@ -186,6 +225,7 @@ function socketHandler(io) {
   async function deleteMessageById(rCode, id) {
     const doc = await Message.findOneAndDelete({ _id: id, roomCode: rCode });
     if (!doc) return;
+    activeRooms.get(rCode)?.receipts.delete(String(doc._id));
     if (doc.size) {
       await Room.updateOne({ roomCode: rCode }, { $inc: { storageBytes: -doc.size } });
     }
@@ -227,7 +267,7 @@ function socketHandler(io) {
   }
 
   io.on('connection', (socket) => {
-    const emitError = (message) => socket.emit('error', { message });
+    const emitError = (message, clientId) => socket.emit('error', { message, clientId });
     const fail = (message, code = 'error') => socket.emit('roomError', { message, code });
 
     // ---- joining ------------------------------------------------------------
@@ -317,7 +357,9 @@ function socketHandler(io) {
         username: uName,
         isHost: member.isHost,
         room: roomInfo(rCode, state.settings),
-        history: history.map(toClientMessage),
+        history: history.map((doc) => toClientMessage(doc, {
+          status: state.receipts.get(String(doc._id))?.status,
+        })),
       });
 
       if (!isRejoin) await postSystem(rCode, state, `${uName} joined the chat.`);
@@ -329,27 +371,30 @@ function socketHandler(io) {
     // ---- messages -----------------------------------------------------------
 
     handle(socket, 'sendMessage', async (payload = {}) => {
+      const clientId = typeof payload.clientId === 'string' && CLIENT_ID_REGEX.test(payload.clientId)
+        ? payload.clientId
+        : undefined;
       const ctx = memberContext(socket);
-      if (!ctx) return emitError('You are not in a room.');
+      if (!ctx) return emitError('You are not in a room.', clientId);
       const { rCode, state, username, member } = ctx;
 
-      if (member.muted) return emitError('The host has muted you.');
+      if (member.muted) return emitError('The host has muted you.', clientId);
 
       const { ciphertext, iv } = payload;
       if (!isBase64(ciphertext, MAX_CIPHERTEXT_LENGTH) || !isBase64(iv, 32)) {
-        return emitError('That message could not be sent.');
+        return emitError('That message could not be sent.', clientId);
       }
       const burnSeconds = BURN_OPTIONS_SECONDS.includes(payload.burnSeconds) ? payload.burnSeconds : 0;
 
       if (!messageLimiter.hit(`${rCode}:${username}`)) {
-        return emitError('You are sending messages too quickly.');
+        return emitError('You are sending messages too quickly.', clientId);
       }
 
       const now = Date.now();
       const slow = state.settings.slowModeSeconds;
       if (slow && !member.isHost) {
         const waitMs = member.lastMessageAt + slow * 1000 - now;
-        if (waitMs > 0) return emitError(`Slow mode is on. Wait ${Math.ceil(waitMs / 1000)}s.`);
+        if (waitMs > 0) return emitError(`Slow mode is on. Wait ${Math.ceil(waitMs / 1000)}s.`, clientId);
       }
       member.lastMessageAt = now;
 
@@ -358,7 +403,7 @@ function socketHandler(io) {
         { roomCode: rCode, storageBytes: { $lte: ROOM_STORAGE_CAP_BYTES - size } },
         { $inc: { storageBytes: size } },
       );
-      if (!reserved) return emitError('This room has reached its storage limit.');
+      if (!reserved) return emitError('This room has reached its storage limit.', clientId);
 
       const doc = await Message.create({
         roomCode: rCode,
@@ -372,7 +417,15 @@ function socketHandler(io) {
         expiresAt: burnSeconds ? new Date(now + burnSeconds * 1000) : state.settings.expiresAt,
       });
 
-      io.to(rCode).emit('message', toClientMessage(doc));
+      const id = String(doc._id);
+      state.receipts.set(id, {
+        recipients: new Set([...state.members.keys()].filter((name) => name !== username)),
+        delivered: new Set(),
+        read: new Set(),
+        status: 'sent',
+      });
+
+      io.to(rCode).emit('message', toClientMessage(doc, { clientId }));
       if (burnSeconds) scheduleBurn(rCode, state, doc._id, burnSeconds * 1000);
     });
 
@@ -400,6 +453,18 @@ function socketHandler(io) {
       );
       if (!doc) return;
       io.to(ctx.rCode).emit('messagePinned', { id: String(doc._id), pinned: doc.pinned, by: ctx.username });
+    });
+
+    // ---- receipts and typing -------------------------------------------------
+
+    socket.on('markDelivered', (payload = {}) => recordReceipts(socket, payload.ids, 'delivered'));
+    socket.on('markRead', (payload = {}) => recordReceipts(socket, payload.ids, 'read'));
+
+    // Relayed to everyone else in the room; clients expire it on their own.
+    socket.on('typing', (payload = {}) => {
+      const ctx = memberContext(socket);
+      if (!ctx || ctx.member.muted) return;
+      socket.to(ctx.rCode).emit('typing', { username: ctx.username, isTyping: !!payload.isTyping });
     });
 
     // ---- host controls ------------------------------------------------------
@@ -500,10 +565,24 @@ function socketHandler(io) {
 
     // ---- leaving ------------------------------------------------------------
 
-    // A deliberate exit takes effect immediately. The ack lets the client wait
-    // for it before dropping the connection.
-    handle(socket, 'leaveRoom', async (ack) => {
+    // A deliberate exit takes effect immediately; the ack lets the client wait
+    // for it before dropping the connection. The host may name someone online
+    // to take over, and then the room carries on with them as host instead of
+    // following the "host leaves" end policy.
+    handle(socket, 'leaveRoom', async (payload, maybeAck) => {
+      const ack = typeof payload === 'function' ? payload : maybeAck;
+      const newHost = payload && typeof payload === 'object' ? payload.newHost : undefined;
       const ctx = memberContext(socket);
+      if (ctx && ctx.member.isHost && typeof newHost === 'string') {
+        const target = ctx.state.members.get(newHost);
+        if (target && target !== ctx.member && target.socketId) {
+          ctx.member.isHost = false;
+          target.isHost = true;
+          target.muted = false;
+          io.to(target.socketId).emit('hostChanged', { isHost: true });
+          await postSystem(ctx.rCode, ctx.state, `${newHost} is now the host.`);
+        }
+      }
       if (ctx) {
         socket.data.roomCode = null;
         socket.leave(ctx.rCode);

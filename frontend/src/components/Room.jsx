@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, LogOut, Menu, QrCode, Settings, Lock } from 'lucide-react';
+import { Users, LogOut, Menu, QrCode, Settings, Lock, Power } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import Header from './Header';
 import ChatArea from './ChatArea';
@@ -8,6 +8,8 @@ import Mode from './Mode';
 import Countdown from './Countdown';
 import InviteModal from './InviteModal';
 import HostPanel from './HostPanel';
+import LeaveDialog from './LeaveDialog';
+import { TypingDots, TypingLabel } from './Typing';
 
 const ERROR_DISPLAY_MS = 4000;
 
@@ -15,12 +17,13 @@ const ERROR_DISPLAY_MS = 4000;
 const RETRYABLE_ERRORS = new Set(['bad_password', 'name_taken', 'rate_limited', 'host_present', 'locked']);
 
 function Room({ session, onLeave, onClosed }) {
-  const { connectSocket, disconnectSocket, leaveRoom, getPinnedMessages, room, me, isConnected } = useSocket();
+  const { connectSocket, disconnectSocket, leaveRoom, closeRoom, getPinnedMessages, room, me, users, isConnected, typingUsers } = useSocket();
   const [error, setError] = useState('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showMobileUsers, setShowMobileUsers] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showHostPanel, setShowHostPanel] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const menuRef = useRef(null);
   const usersRef = useRef(null);
 
@@ -66,13 +69,30 @@ function Room({ session, onLeave, onClosed }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLeaveRoom = () => {
-    if (me?.isHost && room?.endPolicy === 'host_leaves'
-      && !window.confirm('You are the host. Leaving will close the room for everyone. Leave anyway?')) {
-      return;
-    }
-    leaveRoom();
+  // Guests just leave. The host chooses between leaving and ending the room.
+  // When the room closes as soon as the host leaves, the button says so.
+  const isHost = !!me?.isHost;
+  // Others online who could take over as host when the host leaves.
+  const hostCandidates = users.filter((u) => u.online && u.username !== me?.username).map((u) => u.username);
+  const leaveEndsRoom = isHost && room?.endPolicy === 'host_leaves' && hostCandidates.length === 0;
+  const exitLabel = leaveEndsRoom ? 'End room' : 'Leave';
+
+  const leaveNow = (newHost) => {
+    setShowLeaveDialog(false);
+    leaveRoom(newHost);
     onLeave();
+  };
+
+  // The server closes the room and sends everyone, including us, to the takeaway.
+  const endRoomForEveryone = () => {
+    setShowLeaveDialog(false);
+    closeRoom();
+  };
+
+  const handleLeaveRoom = () => {
+    setShowMobileMenu(false);
+    if (isHost) setShowLeaveDialog(true);
+    else leaveNow();  // guests never hand over
   };
 
   const openMenuItem = (open) => {
@@ -90,6 +110,8 @@ function Room({ session, onLeave, onClosed }) {
           onInvite={() => setShowInvite(true)}
           onHostControls={() => setShowHostPanel(true)}
           onLeaveRoom={handleLeaveRoom}
+          exitLabel={exitLabel}
+          exitEndsRoom={leaveEndsRoom}
         />
       </div>
 
@@ -101,8 +123,18 @@ function Room({ session, onLeave, onClosed }) {
               {room?.locked && <Lock size={12} aria-label="Locked" />}
             </span>
             <span className="flex items-center gap-2 mt-0.5">
-              <Countdown expiresAt={room?.expiresAt} />
-              {!isConnected && <span className="text-xs text-amber-600 dark:text-amber-400">Reconnecting…</span>}
+              {/* Like a chat app's status line: "typing…" replaces it while someone types. */}
+              {typingUsers.length > 0 ? (
+                <span className="flex items-center gap-1.5 min-w-0 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  <TypingDots size="sm" />
+                  <TypingLabel names={typingUsers} className="min-w-0" />
+                </span>
+              ) : (
+                <>
+                  <Countdown expiresAt={room?.expiresAt} />
+                  {!isConnected && <span className="text-xs text-amber-600 dark:text-amber-400">Reconnecting…</span>}
+                </>
+              )}
             </span>
           </div>
 
@@ -152,7 +184,8 @@ function Room({ session, onLeave, onClosed }) {
                   )}
                   <button onClick={handleLeaveRoom}
                     className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">
-                    <LogOut className="w-4 h-4 mr-2" /> Leave room
+                    {leaveEndsRoom ? <Power className="w-4 h-4 mr-2" /> : <LogOut className="w-4 h-4 mr-2" />}
+                    {leaveEndsRoom ? 'End room' : isHost ? 'Leave or end room' : 'Leave room'}
                   </button>
                 </div>
               )}
@@ -176,6 +209,15 @@ function Room({ session, onLeave, onClosed }) {
 
       {showInvite && (
         <InviteModal session={session} requiresPassword={room?.requiresPassword} onClose={() => setShowInvite(false)} />
+      )}
+      {showLeaveDialog && isHost && (
+        <LeaveDialog
+          endPolicy={room?.endPolicy}
+          candidates={hostCandidates}
+          onLeave={leaveNow}
+          onEnd={endRoomForEveryone}
+          onClose={() => setShowLeaveDialog(false)}
+        />
       )}
       {showHostPanel && me?.isHost && (
         <HostPanel onClose={() => setShowHostPanel(false)} />

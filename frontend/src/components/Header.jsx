@@ -1,11 +1,12 @@
 import React from 'react';
-import { MessageCircle, LogOut, QrCode, Settings, Lock, ShieldCheck } from 'lucide-react';
+import { MessageCircle, LogOut, QrCode, Settings, Lock, ShieldCheck, Power } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import Mode from './Mode';
 import Countdown from './Countdown';
+import { TypingDots, TypingLabel } from './Typing';
 
-function Header({ roomCode, username, onInvite, onHostControls, onLeaveRoom }) {
-    const { room, me, isConnected } = useSocket();
+function Header({ roomCode, username, onInvite, onHostControls, onLeaveRoom, exitLabel = 'Leave', exitEndsRoom = false }) {
+    const { room, me, isConnected, typingUsers } = useSocket();
 
     return (
         <div className="w-full flex justify-center mt-4 px-2">
@@ -18,13 +19,20 @@ function Header({ roomCode, username, onInvite, onHostControls, onLeaveRoom }) {
                             {room?.locked && <Lock size={16} className="text-amber-600" aria-label="Locked" />}
                             <Countdown expiresAt={room?.expiresAt} />
                         </h1>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
-                            {username}{me?.isHost && ' (host)'}
-                            <span className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
-                                <ShieldCheck size={12} /> End-to-end encrypted
-                            </span>
-                            {!isConnected && <span className="text-xs text-amber-600 dark:text-amber-400">Reconnecting…</span>}
-                        </p>
+                        {typingUsers.length > 0 ? (
+                            <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                                <TypingDots size="sm" />
+                                <TypingLabel names={typingUsers} />
+                            </p>
+                        ) : (
+                            <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2 animate-notice-in">
+                                {username}{me?.isHost && ' (host)'}
+                                <span className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-400">
+                                    <ShieldCheck size={12} /> End-to-end encrypted
+                                </span>
+                                {!isConnected && <span className="text-xs text-amber-600 dark:text-amber-400">Reconnecting…</span>}
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -53,8 +61,8 @@ function Header({ roomCode, username, onInvite, onHostControls, onLeaveRoom }) {
                         onClick={onLeaveRoom}
                         className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-xl shadow transition duration-200"
                     >
-                        <LogOut size={16} />
-                        Leave
+                        {exitEndsRoom ? <Power size={16} /> : <LogOut size={16} />}
+                        {exitLabel}
                     </button>
                 </div>
             </div>

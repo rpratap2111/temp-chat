@@ -10,17 +10,10 @@ const HEADING = 'text-sm font-semibold text-gray-700 dark:text-gray-200';
 const NOTE = 'text-xs text-gray-500 dark:text-gray-400';
 
 function HostPanel({ onClose }) {
-    const { room, updateSettings, extendRoom, closeRoom } = useSocket();
+    const { room, updateSettings, extendRoom } = useSocket();
     if (!room) return null;
 
     const policy = END_POLICY_OPTIONS.find((o) => o.value === room.endPolicy);
-
-    const handleClose = () => {
-        if (window.confirm('Close the room for everyone? All messages will be deleted.')) {
-            closeRoom();
-            onClose();
-        }
-    };
 
     return (
         <Modal title="Host controls" onClose={onClose}>
@@ -74,13 +67,7 @@ function HostPanel({ onClose }) {
                         {policy && ` It also closes: ${policy.label.toLowerCase()}.`}
                     </p>
                 </div>
-
-                <button
-                    onClick={handleClose}
-                    className="w-full py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold"
-                >
-                    Close room for everyone
-                </button>
+                <p className={NOTE}>To end the room for everyone, use the red button in the top bar.</p>
             </div>
         </Modal>
     );
