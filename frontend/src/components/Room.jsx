@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, LogOut, Menu, QrCode, Settings, Lock, Power } from 'lucide-react';
+import { Users, LogOut, Menu, QrCode, Settings, Lock, Power, Crown, X } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import Header from './Header';
 import ChatArea from './ChatArea';
@@ -24,6 +24,8 @@ function Room({ session, onLeave, onClosed }) {
   const [showInvite, setShowInvite] = useState(false);
   const [showHostPanel, setShowHostPanel] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  // Shown to whoever the previous host handed the room to.
+  const [becameHost, setBecameHost] = useState(false);
   const menuRef = useRef(null);
   const usersRef = useRef(null);
 
@@ -45,6 +47,7 @@ function Room({ session, onLeave, onClosed }) {
         });
         // Anything else (e.g. a message that failed to send) is shown in place.
         socket.on('error', (data) => setError(data.message));
+        socket.on('hostChanged', ({ isHost }) => { if (isHost) setBecameHost(true); });
       })
       .catch(() => onLeave('This invite link is not valid.'));
 
@@ -53,6 +56,12 @@ function Room({ session, onLeave, onClosed }) {
       disconnectSocket();
     };
   }, [session, connectSocket, disconnectSocket, getPinnedMessages, onLeave, onClosed]);
+
+  useEffect(() => {
+    if (!becameHost) return undefined;
+    const timer = setTimeout(() => setBecameHost(false), 10000);
+    return () => clearTimeout(timer);
+  }, [becameHost]);
 
   useEffect(() => {
     if (!error) return undefined;
@@ -193,6 +202,27 @@ function Room({ session, onLeave, onClosed }) {
           </div>
         </div>
       </div>
+
+      {becameHost && (
+        <div className="mx-2 mt-2 sm:mx-4 sm:mt-4 flex-shrink-0 flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg animate-msg-in-left" role="status">
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/25 animate-tick-pop">
+            <Crown size={22} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold">You are now the host</div>
+            <div className="text-sm text-white/90">You can lock the room, mute people, add time and end the room.</div>
+          </div>
+          <button
+            onClick={() => { setBecameHost(false); setShowHostPanel(true); }}
+            className="hidden sm:block flex-shrink-0 px-3 py-1.5 rounded-lg bg-white text-orange-600 text-sm font-semibold hover:bg-orange-50"
+          >
+            Host controls
+          </button>
+          <button onClick={() => setBecameHost(false)} aria-label="Dismiss" className="p-1 rounded-full hover:bg-white/20 flex-shrink-0">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 mx-2 mt-2 sm:px-4 sm:py-3 sm:mx-4 sm:mt-4 rounded-lg animate-fadein flex-shrink-0">

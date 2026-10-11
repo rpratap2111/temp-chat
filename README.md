@@ -1,9 +1,9 @@
-# 🗨️ Temp Chat
+# Temp Chat
 
 Disposable, end-to-end encrypted chat rooms. Private while it lasts, gone when
 it ends, and you keep only what the room agrees to pin.
 
-🔗 **Live demo:** [https://temp-chat-app-lilac.vercel.app](https://temp-chat-app-lilac.vercel.app)
+**Live demo:** [https://temp-chat-app-lilac.vercel.app](https://temp-chat-app-lilac.vercel.app)
 
 ## Stack
 
@@ -109,7 +109,7 @@ MIT License. Copyright (c) 2025 Rudra Pratap.
 
 ## Contact
 
-Built with ❤️ by **Rudra Pratap**
+Built by **Rudra Pratap**
 
 - GitHub: [@rpratap2111](https://github.com/rpratap2111/)
 - LinkedIn: [Rudra Pratap](https://www.linkedin.com/in/rudra-pratap-a34a6b275/)

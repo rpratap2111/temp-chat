@@ -207,9 +207,10 @@ function ChatArea() {
                     {showPinned && (
                         <ul className="px-4 pb-3 space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
                             {pinned.map((m) => (
-                                <li key={m.id} className="text-gray-700 dark:text-gray-200 truncate">
-                                    <span className="font-semibold">{m.username}:</span>{' '}
-                                    {m.text || (m.file ? `📎 ${m.file.name}` : '')}
+                                <li key={m.id} className="flex items-center gap-1 min-w-0 text-gray-700 dark:text-gray-200">
+                                    <span className="font-semibold flex-shrink-0">{m.username}:</span>
+                                    {m.file && <Paperclip size={13} className="flex-shrink-0" aria-label="File" />}
+                                    <span className="truncate">{m.text || m.file?.name || ''}</span>
                                 </li>
                             ))}
                         </ul>

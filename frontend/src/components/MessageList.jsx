@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Pin, PinOff, Trash2, Flame, Download, Paperclip, Reply,
-    Check, CheckCheck, Clock, AlertCircle, X, ShieldCheck,
+    Check, CheckCheck, Clock, AlertCircle, X, ShieldCheck, Crown, Hand,
 } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
 import { AVATAR_COLORS, NAME_COLORS, colorIndex } from '../lib/colors';
@@ -10,6 +10,15 @@ import { AVATAR_COLORS, NAME_COLORS, colorIndex } from '../lib/colors';
 // one avatar, one tail.
 const GROUP_WINDOW_MS = 3 * 60 * 1000;
 
+
+// System notices are written by the server for everyone. A few read better
+// in the second person for the person they are about.
+function personalizeNotice(text, myName) {
+    if (myName && text === `${myName} is now the host.`) return 'You are now the host';
+    return text;
+}
+
+const isHostNoticeFor = (text, myName) => !!myName && text === `${myName} is now the host.`;
 
 const formatTime = (timestamp) =>
     new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -151,7 +160,9 @@ function MessageList({ messages, onReply, replyingToId }) {
                     <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-300">
                         <ShieldCheck size={28} />
                     </div>
-                    <div className="font-semibold text-slate-800 dark:text-slate-100">Say hi 👋</div>
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-100">
+                        Say hi <Hand size={16} className="text-amber-500 origin-bottom-right animate-wave" aria-hidden="true" />
+                    </div>
                     <div className="mt-1 max-w-xs text-sm text-slate-600 dark:text-slate-400">
                         Messages are end-to-end encrypted. Only people with the invite link can read them.
                     </div>
@@ -164,8 +175,11 @@ function MessageList({ messages, onReply, replyingToId }) {
                 if (msg.messageType === 'system') {
                     return (
                         <div key={key} className={`flex justify-center my-2 ${msg.isNew ? 'animate-notice-in' : ''}`}>
-                            <div className="px-3 py-1 rounded-lg text-xs font-medium bg-white/80 text-slate-600 shadow-sm dark:bg-slate-800/80 dark:text-slate-300">
-                                {msg.text}
+                            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium shadow-sm ${isHostNoticeFor(msg.text, me?.username)
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200'
+                                : 'bg-white/80 text-slate-600 dark:bg-slate-800/80 dark:text-slate-300'}`}>
+                                {isHostNoticeFor(msg.text, me?.username) && <Crown size={13} aria-hidden="true" />}
+                                {personalizeNotice(msg.text, me?.username)}
                             </div>
                         </div>
                     );
