@@ -9,9 +9,12 @@ import Countdown from './Countdown';
 import InviteModal from './InviteModal';
 import HostPanel from './HostPanel';
 import LeaveDialog from './LeaveDialog';
+import BurnLine from './BurnLine';
 import { TypingDots, TypingLabel } from './Typing';
 
 const ERROR_DISPLAY_MS = 4000;
+
+const MENU_ITEM = 'w-full h-9 px-3 rounded-lg text-left text-sm flex items-center gap-2 transition-colors';
 
 // Join failures where retrying the same invite makes sense.
 const RETRYABLE_ERRORS = new Set(['bad_password', 'name_taken', 'rate_limited', 'host_present', 'locked']);
@@ -49,7 +52,7 @@ function Room({ session, onLeave, onClosed }) {
         socket.on('error', (data) => setError(data.message));
         socket.on('hostChanged', ({ isHost }) => { if (isHost) setBecameHost(true); });
       })
-      .catch(() => onLeave('This invite link is not valid.'));
+      .catch(() => onLeave('This invite link is not valid'));
 
     return () => {
       cancelled = true;
@@ -110,7 +113,7 @@ function Room({ session, onLeave, onClosed }) {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-blue-200 via-indigo-100 to-purple-200 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300 overflow-hidden">
+    <div className="h-screen flex flex-col bg-page overflow-hidden">
 
       <div className="flex-shrink-0 hidden lg:block">
         <Header
@@ -124,43 +127,43 @@ function Room({ session, onLeave, onClosed }) {
         />
       </div>
 
-      <div className="flex-shrink-0 lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 relative z-40">
-        <div className="flex items-center justify-between px-4 py-3 gap-2">
+      <div className="flex-shrink-0 lg:hidden bg-surface relative z-40">
+        <div className="flex items-center justify-between h-14 pl-4 pr-2 gap-2">
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-              Room {session.roomCode}
+            <span className="text-sm font-medium text-ink flex items-center gap-1">
+              <span>Room <span className="font-mono">{session.roomCode}</span></span>
               {room?.locked && <Lock size={12} aria-label="Locked" />}
             </span>
-            <span className="flex items-center gap-2 mt-0.5">
-              {/* Like a chat app's status line: "typing…" replaces it while someone types. */}
+            <span className="flex items-center gap-2 min-w-0 text-xs leading-5 text-ink-2">
+              {/* Like a chat app's status line: "typing" replaces it while someone types. */}
               {typingUsers.length > 0 ? (
-                <span className="flex items-center gap-1.5 min-w-0 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                  <TypingDots size="sm" />
+                <>
+                  <TypingDots />
                   <TypingLabel names={typingUsers} className="min-w-0" />
-                </span>
+                </>
               ) : (
                 <>
                   <Countdown expiresAt={room?.expiresAt} />
-                  {!isConnected && <span className="text-xs text-amber-600 dark:text-amber-400">Reconnecting…</span>}
+                  {!isConnected && <span className="text-caution">Reconnecting…</span>}
                 </>
               )}
             </span>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-1">
             <Mode className="" />
 
             <div className="relative" ref={usersRef}>
               <button
                 onClick={() => { setShowMobileUsers((open) => !open); setShowMobileMenu(false); }}
-                className="p-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors shadow-md"
+                className="btn btn-ghost btn-icon"
                 aria-label="Show people in the room"
               >
-                <Users className="w-5 h-5" />
+                <Users size={16} />
               </button>
 
               {showMobileUsers && (
-                <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[60] overflow-hidden">
+                <div className="menu-panel absolute right-0 top-full mt-2 w-72 z-[60] overflow-hidden animate-msg-in">
                   <UsersSidebar isMobile />
                 </div>
               )}
@@ -169,31 +172,28 @@ function Room({ session, onLeave, onClosed }) {
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => { setShowMobileMenu((open) => !open); setShowMobileUsers(false); }}
-                className="p-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition-colors shadow-md"
+                className="btn btn-ghost btn-icon"
                 aria-label="Open menu"
               >
-                <Menu className="w-5 h-5" />
+                <Menu size={16} />
               </button>
 
               {showMobileMenu && (
-                <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[60] overflow-hidden py-2">
-                  <div className="px-4 py-3 text-sm border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                    <div className="font-medium text-gray-700 dark:text-gray-300">{session.username}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{me?.isHost ? 'Host' : 'Guest'}</div>
+                <div className="menu-panel absolute right-0 top-full mt-2 w-56 z-[60] overflow-hidden p-1 animate-msg-in">
+                  <div className="px-3 py-2 mb-1 border-b border-line">
+                    <div className="text-sm font-medium text-ink truncate">{session.username}</div>
+                    <div className="text-xs text-ink-3">{me?.isHost ? 'Host' : 'Guest'}</div>
                   </div>
-                  <button onClick={() => openMenuItem(setShowInvite)}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
-                    <QrCode className="w-4 h-4 mr-2" /> Invite people
+                  <button onClick={() => openMenuItem(setShowInvite)} className={`${MENU_ITEM} text-ink hover:bg-raised`}>
+                    <QrCode size={16} /> Invite people
                   </button>
                   {me?.isHost && (
-                    <button onClick={() => openMenuItem(setShowHostPanel)}
-                      className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center">
-                      <Settings className="w-4 h-4 mr-2" /> Host controls
+                    <button onClick={() => openMenuItem(setShowHostPanel)} className={`${MENU_ITEM} text-ink hover:bg-raised`}>
+                      <Settings size={16} /> Host controls
                     </button>
                   )}
-                  <button onClick={handleLeaveRoom}
-                    className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center">
-                    {leaveEndsRoom ? <Power className="w-4 h-4 mr-2" /> : <LogOut className="w-4 h-4 mr-2" />}
+                  <button onClick={handleLeaveRoom} className={`${MENU_ITEM} text-negative hover:bg-negative-soft`}>
+                    {leaveEndsRoom ? <Power size={16} /> : <LogOut size={16} />}
                     {leaveEndsRoom ? 'End room' : isHost ? 'Leave or end room' : 'Leave room'}
                   </button>
                 </div>
@@ -203,36 +203,39 @@ function Room({ session, onLeave, onClosed }) {
         </div>
       </div>
 
+      {/* The room's lifetime, burning down. */}
+      <div className="h-0.5 flex-shrink-0 bg-line">
+        <BurnLine startsAt={room?.createdAt} endsAt={room?.expiresAt} className="h-full" />
+      </div>
+
       {becameHost && (
-        <div className="mx-2 mt-2 sm:mx-4 sm:mt-4 flex-shrink-0 flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg animate-msg-in-left" role="status">
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/25 animate-tick-pop">
-            <Crown size={22} />
-          </span>
+        <div className="mx-4 mt-3 flex-shrink-0 flex items-center gap-3 px-4 py-3 rounded-xl bg-surface border border-line animate-msg-in" role="status">
+          <Crown size={16} className="text-accent" />
           <div className="min-w-0 flex-1">
-            <div className="font-semibold">You are now the host</div>
-            <div className="text-sm text-white/90">You can lock the room, mute people, add time and end the room.</div>
+            <div className="text-sm font-medium text-ink">You are now the host</div>
+            <div className="text-sm text-ink-2">You can lock the room, mute people, add time and end the room</div>
           </div>
           <button
             onClick={() => { setBecameHost(false); setShowHostPanel(true); }}
-            className="hidden sm:block flex-shrink-0 px-3 py-1.5 rounded-lg bg-white text-orange-600 text-sm font-semibold hover:bg-orange-50"
+            className="btn btn-secondary hidden sm:inline-flex"
           >
             Host controls
           </button>
-          <button onClick={() => setBecameHost(false)} aria-label="Dismiss" className="p-1 rounded-full hover:bg-white/20 flex-shrink-0">
+          <button onClick={() => setBecameHost(false)} aria-label="Dismiss" className="btn-icon-sm">
             <X size={16} />
           </button>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 mx-2 mt-2 sm:px-4 sm:py-3 sm:mx-4 sm:mt-4 rounded-lg animate-fadein flex-shrink-0">
+        <div className="bg-negative-soft text-negative text-sm px-4 py-2 mx-4 mt-3 rounded-lg animate-notice-in flex-shrink-0" role="alert">
           {error}
         </div>
       )}
 
-      <div className="flex-1 flex max-w-6xl mx-auto w-full animate-fadein min-h-0 overflow-hidden">
+      <div className="flex-1 flex max-w-[1440px] mx-auto w-full animate-fadein min-h-0 overflow-hidden">
         <ChatArea />
-        <div className="hidden lg:block">
+        <div className="hidden lg:flex">
           <UsersSidebar />
         </div>
       </div>

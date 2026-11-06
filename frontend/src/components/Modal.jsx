@@ -11,15 +11,15 @@ function Modal({ title, onClose, children }) {
 
     return (
         <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 animate-notice-in"
             onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
             <div role="dialog" aria-modal="true" aria-label={title}
-                className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-700 animate-fadein">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="font-semibold text-gray-800 dark:text-white">{title}</h2>
-                    <button onClick={onClose} className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Close">
-                        <X size={18} />
+                className="w-full max-w-md max-h-full overflow-y-auto custom-scrollbar rounded-2xl bg-surface border border-line animate-fadein">
+                <div className="flex items-center justify-between h-14 pl-5 pr-3 border-b border-line">
+                    <h2 className="text-base font-medium text-ink">{title}</h2>
+                    <button onClick={onClose} className="btn btn-ghost btn-icon" aria-label="Close">
+                        <X size={16} />
                     </button>
                 </div>
                 <div className="p-5">{children}</div>

@@ -5,7 +5,7 @@ import { MESSAGE_MAX_LENGTH, MAX_FILE_BYTES, BURN_OPTIONS } from '../config';
 import { replySnippet } from '../lib/reply';
 import MessageList from './MessageList';
 import { TypingDots, TypingLabel } from './Typing';
-import { AVATAR_COLORS, colorIndex } from '../lib/colors';
+import Avatar from './Avatar';
 
 const formatBytes = (bytes) => (bytes < 1024 * 1024
     ? `${Math.max(1, Math.round(bytes / 1024))} KB`
@@ -16,6 +16,9 @@ const STICK_TO_BOTTOM_PX = 120;
 // "Typing" is re-sent at most this often, and cleared after this much idle time.
 const TYPING_RESEND_MS = 2500;
 const TYPING_IDLE_MS = 3000;
+
+// Messages, pinned bar and composer share one readable column.
+const COLUMN = 'w-full max-w-3xl mx-auto px-4';
 
 function ChatArea() {
     const {
@@ -144,7 +147,7 @@ function ChatArea() {
         e.target.value = '';
         if (!picked) return;
         if (picked.size > MAX_FILE_BYTES) {
-            setLocalError(`Files are limited to ${formatBytes(MAX_FILE_BYTES)}.`);
+            setLocalError(`Files are limited to ${formatBytes(MAX_FILE_BYTES)}`);
             return;
         }
         setFile(picked);
@@ -170,7 +173,7 @@ function ChatArea() {
             }
         } catch (error) {
             console.error(error);
-            setLocalError('That message could not be encrypted and sent.');
+            setLocalError('That message could not be encrypted and sent');
         } finally {
             setSending(false);
             inputRef.current?.focus();
@@ -191,30 +194,32 @@ function ChatArea() {
     const hasDraft = !!newMessage.trim() || !!file;
 
     return (
-        <div className="flex-1 flex flex-col p-2 sm:p-4 min-w-0">
+        <div className="flex-1 flex flex-col min-w-0">
             {pinned.length > 0 && (
-                <div className="mb-2 rounded-xl bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-500/30 text-sm shadow-sm">
-                    <button
-                        onClick={() => setShowPinned((open) => !open)}
-                        className="w-full flex items-center justify-between px-4 py-2 text-amber-800 dark:text-amber-200 font-medium"
-                    >
-                        <span className="flex items-center gap-2 min-w-0">
-                            <Pin size={14} className="flex-shrink-0" />
-                            <span className="truncate">{pinned.length} pinned · kept when the room closes</span>
-                        </span>
-                        {showPinned ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </button>
-                    {showPinned && (
-                        <ul className="px-4 pb-3 space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
-                            {pinned.map((m) => (
-                                <li key={m.id} className="flex items-center gap-1 min-w-0 text-gray-700 dark:text-gray-200">
-                                    <span className="font-semibold flex-shrink-0">{m.username}:</span>
-                                    {m.file && <Paperclip size={13} className="flex-shrink-0" aria-label="File" />}
-                                    <span className="truncate">{m.text || m.file?.name || ''}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+                <div className={`${COLUMN} pt-3 flex-shrink-0`}>
+                    <div className="rounded-xl bg-surface border border-line text-sm">
+                        <button
+                            onClick={() => setShowPinned((open) => !open)}
+                            className="w-full flex items-center justify-between h-10 px-3 rounded-xl text-ink-2 hover:text-ink transition-colors"
+                        >
+                            <span className="flex items-center gap-2 min-w-0">
+                                <Pin size={16} />
+                                <span className="truncate">{pinned.length} pinned · kept when the room closes</span>
+                            </span>
+                            {showPinned ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {showPinned && (
+                            <ul className="px-3 pb-3 space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
+                                {pinned.map((m) => (
+                                    <li key={m.id} className="flex items-center gap-1 min-w-0 text-ink-2">
+                                        <span className="font-medium text-ink flex-shrink-0">{m.username}:</span>
+                                        {m.file && <Paperclip size={12} aria-label="File" />}
+                                        <span className="truncate">{m.text || m.file?.name || ''}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -223,143 +228,127 @@ function ChatArea() {
                 <div
                     ref={scrollRef}
                     onScroll={handleScroll}
-                    className="chat-wallpaper h-full overflow-y-auto overflow-x-hidden px-3 sm:px-5 py-3
-                        rounded-2xl shadow-inner border border-white/40 dark:border-white/5 custom-scrollbar"
+                    className="h-full overflow-y-auto overflow-x-hidden custom-scrollbar"
                 >
-                    <MessageList messages={messages} onReply={handleReply} replyingToId={replyTo?.id} />
-                    {typingUsers.length > 0 && (
-                        <div className="mt-3 flex items-end gap-2 animate-msg-in-left">
-                            {/* Stacked avatars of whoever is typing. */}
-                            <div className="flex -space-x-2 self-start">
-                                {typingUsers.slice(0, 3).map((name) => (
-                                    <div key={name}
-                                        className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white shadow ring-2 ring-white dark:ring-slate-800 ${AVATAR_COLORS[colorIndex(name)]}`}>
-                                        {name.charAt(0).toUpperCase()}
-                                    </div>
-                                ))}
+                    <div className={`${COLUMN} py-4`}>
+                        <MessageList messages={messages} onReply={handleReply} replyingToId={replyTo?.id} />
+                        {typingUsers.length > 0 && (
+                            <div className="mt-3 flex items-center gap-2 animate-msg-in">
+                                {/* Stacked avatars of whoever is typing. */}
+                                <div className="flex -space-x-2">
+                                    {typingUsers.slice(0, 3).map((name) => (
+                                        <Avatar key={name} name={name} className="ring-2 ring-page" />
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-2 h-9 px-3 rounded-xl rounded-tl-sm bg-surface border border-line text-ink-3">
+                                    <TypingDots />
+                                    <TypingLabel names={typingUsers} className="text-xs" />
+                                </div>
                             </div>
-                            <div className="relative bubble-tail-left flex flex-col items-start gap-1.5 rounded-2xl rounded-tl-none bg-white dark:bg-slate-700 px-3.5 py-2.5 shadow-sm animate-typing-breathe">
-                                <TypingLabel names={typingUsers} className="text-xs font-semibold text-indigo-600 dark:text-indigo-300" />
-                                <TypingDots className="text-slate-400 dark:text-slate-300" />
-                            </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 {!atBottom && (
                     <button
                         onClick={() => scrollToBottom()}
-                        className={`absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg border border-black/5 hover:scale-105 transition animate-notice-in dark:bg-slate-700 dark:text-slate-100 dark:border-white/10 ${unseenCount ? 'animate-soft-ping' : ''}`}
+                        className={`btn btn-secondary absolute bottom-4 right-4 animate-notice-in ${unseenCount ? '' : 'btn-icon'}`}
                         aria-label={unseenCount ? `${unseenCount} new messages, jump to latest` : 'Jump to latest'}
                     >
-                        <ArrowDown size={18} />
                         {unseenCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center">
-                                {unseenCount > 99 ? '99+' : unseenCount}
-                            </span>
+                            <span className="font-mono text-xs tabular-nums">{unseenCount > 99 ? '99+' : unseenCount} new</span>
                         )}
+                        <ArrowDown size={16} />
                     </button>
                 )}
             </div>
 
             {/* Composer */}
-            <div className="mt-2 sm:mt-3 flex-shrink-0 w-full">
+            <div className={`${COLUMN} pt-2 pb-4 flex-shrink-0`}>
                 {localError && (
-                    <div className="mb-2 px-3 text-sm text-red-700 dark:text-red-300 animate-notice-in">{localError}</div>
+                    <div className="mb-2 text-sm text-negative animate-notice-in" role="alert">{localError}</div>
                 )}
 
                 {(replyTo || file) && (
-                    <div className="mb-2 rounded-2xl bg-white/90 dark:bg-slate-800/90 shadow-sm overflow-hidden animate-notice-in">
+                    <div className="mb-2 rounded-xl bg-surface border border-line overflow-hidden animate-notice-in">
                         {replyTo && (
-                            <div className="flex items-start gap-2 px-3 py-2 border-l-4 border-indigo-500 text-sm">
-                                <Reply size={14} className="mt-0.5 flex-shrink-0 text-indigo-600 dark:text-indigo-300" />
+                            <div className="flex items-start gap-2 px-3 py-2 border-l-2 border-accent text-sm">
+                                <Reply size={16} className="mt-0.5 text-ink-3" />
                                 <div className="min-w-0 flex-1">
-                                    <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                                    <div className="text-xs font-medium text-ink-2">
                                         Replying to {replyTo.username === me?.username ? 'yourself' : replyTo.username}
                                     </div>
-                                    <div className="truncate text-slate-700 dark:text-slate-200">{replySnippet(replyTo)}</div>
+                                    <div className="truncate text-ink">{replySnippet(replyTo)}</div>
                                 </div>
-                                <button onClick={() => setReplyTo(null)} aria-label="Cancel reply" title="Cancel reply (Esc)"
-                                    className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300">
-                                    <X size={14} />
+                                <button onClick={() => setReplyTo(null)} aria-label="Cancel reply" title="Cancel reply (Esc)" className="btn-icon-sm">
+                                    <X size={16} />
                                 </button>
                             </div>
                         )}
                         {file && (
-                            <div className="flex items-center gap-2 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 border-t border-black/5 dark:border-white/5 first:border-t-0">
-                                <Paperclip size={14} className="text-indigo-600 dark:text-indigo-300" />
+                            <div className="flex items-center gap-2 px-3 py-2 text-sm text-ink border-t border-line first:border-t-0">
+                                <Paperclip size={16} className="text-ink-3" />
                                 <span className="truncate">{file.name}</span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400 flex-shrink-0">{formatBytes(file.size)}</span>
-                                <button onClick={() => setFile(null)} aria-label="Remove attachment"
-                                    className="ml-auto p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10">
-                                    <X size={14} />
+                                <span className="font-mono text-xs text-ink-3 flex-shrink-0">{formatBytes(file.size)}</span>
+                                <button onClick={() => setFile(null)} aria-label="Remove attachment" className="btn-icon-sm ml-auto">
+                                    <X size={16} />
                                 </button>
                             </div>
                         )}
                     </div>
                 )}
 
-                <div className="flex items-center gap-2">
-                    <div className="flex-1 min-w-0 flex items-center gap-1 pl-1.5 pr-2 py-1.5 rounded-full
-                        bg-white dark:bg-slate-800 shadow-md border border-black/5 dark:border-white/10
-                        focus-within:ring-2 focus-within:ring-indigo-400/60 transition-shadow">
+                <div className="flex items-center gap-1 p-1 rounded-xl bg-surface border border-line-strong focus-within:border-ink-3 transition-colors">
+                    <input ref={fileInputRef} type="file" className="hidden" onChange={handlePickFile} />
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={!canSend}
+                        className="btn btn-ghost btn-icon"
+                        aria-label="Attach a file"
+                        title="Attach a file (deleted with the room)"
+                    >
+                        <Paperclip size={16} />
+                    </button>
 
-                        <input ref={fileInputRef} type="file" className="hidden" onChange={handlePickFile} />
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={!canSend}
-                            className="p-2 rounded-full text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:text-slate-400 dark:hover:text-indigo-300 dark:hover:bg-white/10 disabled:opacity-40 transition"
-                            aria-label="Attach a file"
-                            title="Attach a file (deleted with the room)"
-                        >
-                            <Paperclip size={19} />
-                        </button>
+                    {/* Tap to cycle the self-destruct timer: off, 10s, 1 min, 5 min. */}
+                    <button
+                        onClick={() => setBurnIndex((i) => (i + 1) % BURN_OPTIONS.length)}
+                        className={`btn btn-ghost gap-1 ${burn.seconds ? 'px-2 bg-accent-soft text-accent' : 'btn-icon'}`}
+                        aria-label={`Self-destruct timer: ${burn.label}. Tap to change.`}
+                        title={burn.seconds ? `Disappears after ${burn.label}` : 'Self-destruct: off'}
+                    >
+                        <Flame size={16} />
+                        {burn.seconds > 0 && <span className="font-mono text-xs">{burn.label}</span>}
+                    </button>
 
-                        {/* Tap to cycle the self-destruct timer: off, 10s, 1 min, 5 min. */}
-                        <button
-                            onClick={() => setBurnIndex((i) => (i + 1) % BURN_OPTIONS.length)}
-                            className={`flex items-center gap-0.5 p-2 rounded-full text-xs font-semibold transition ${burn.seconds
-                                ? 'bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300'
-                                : 'text-slate-500 hover:text-orange-500 hover:bg-orange-50 dark:text-slate-400 dark:hover:bg-white/10'}`}
-                            aria-label={`Self-destruct timer: ${burn.label}. Tap to change.`}
-                            title={burn.seconds ? `Disappears after ${burn.label}` : 'Self-destruct: off'}
-                        >
-                            <Flame size={19} />
-                            {burn.seconds > 0 && <span>{burn.label}</span>}
-                        </button>
-
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={newMessage}
-                            onChange={handleChange}
-                            onKeyDown={handleKeyDown}
-                            onBlur={stopTyping}
-                            maxLength={MESSAGE_MAX_LENGTH}
-                            placeholder={placeholder}
-                            disabled={!isConnected || isMuted}
-                            className="flex-1 min-w-0 px-2 py-1.5 bg-transparent border-none text-[15px]
-                                text-slate-900 dark:text-white
-                                placeholder-slate-400 dark:placeholder-slate-500
-                                focus:outline-none disabled:cursor-not-allowed"
-                        />
-                    </div>
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={newMessage}
+                        onChange={handleChange}
+                        onKeyDown={handleKeyDown}
+                        onBlur={stopTyping}
+                        maxLength={MESSAGE_MAX_LENGTH}
+                        placeholder={placeholder}
+                        aria-label="Message"
+                        disabled={!isConnected || isMuted}
+                        className="flex-1 min-w-0 h-9 px-2 bg-transparent border-none text-[15px] text-ink
+                            placeholder:text-ink-3 outline-none disabled:cursor-not-allowed"
+                    />
 
                     <button
                         onClick={handleSendMessage}
                         disabled={!canSend || !hasDraft}
                         aria-label="Send message"
-                        className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200
-                            bg-gradient-to-br from-indigo-500 to-violet-600
-                            ${hasDraft && canSend ? 'scale-100 hover:scale-105 active:scale-90' : 'scale-90 opacity-50'}`}
+                        className="btn btn-primary btn-icon"
                     >
-                        <Send size={20} className={`transition-transform duration-200 ${hasDraft ? 'translate-x-0.5 -rotate-12' : ''}`} />
+                        <Send size={16} />
                     </button>
                 </div>
 
                 {room?.slowModeSeconds > 0 && !me?.isHost && (
-                    <p className="mt-1 px-3 text-xs text-slate-600 dark:text-slate-400">
-                        Slow mode: one message every {room.slowModeSeconds} seconds.
+                    <p className="mt-1 px-1 text-xs text-ink-3">
+                        Slow mode: one message every {room.slowModeSeconds} seconds
                     </p>
                 )}
             </div>

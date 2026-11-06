@@ -1,8 +1,16 @@
+const dns = require('dns');
 const mongoose = require('mongoose');
 const Room = require('./room');
 const Message = require('./message');
 
 const connectDB = async () => {
+  // mongodb+srv:// addresses need an SRV lookup, which Node does itself rather
+  // than through the system. On some machines it picks a DNS server that isn't
+  // there, so DNS_SERVERS can name the ones to use.
+  if (process.env.DNS_SERVERS) {
+    dns.setServers(process.env.DNS_SERVERS.split(',').map((server) => server.trim()).filter(Boolean));
+  }
+
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('MongoDB connected successfully');

@@ -1,5 +1,5 @@
 import React from 'react';
-import { DoorClosed, Download, Pin, Paperclip } from 'lucide-react';
+import { Download, Paperclip } from 'lucide-react';
 import Mode from './Mode';
 
 // Builds a plain-text record of the pinned messages for download.
@@ -17,6 +17,9 @@ function buildTakeaway({ roomCode, pinned }) {
     return lines.join('\n');
 }
 
+const formatPinTime = (timestamp) =>
+    new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
 // Shown after a room closes: why it closed, and the pinned messages the room
 // chose to keep. Everything else is already gone from the server.
 function ClosedRoom({ info, onDone }) {
@@ -33,60 +36,63 @@ function ClosedRoom({ info, onDone }) {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-200 via-indigo-100 to-purple-200 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-            <Mode />
-            <div className="w-full max-w-lg p-8 rounded-2xl shadow-xl bg-white/30 dark:bg-white/10 backdrop-blur-lg border border-white/20 animate-fadein">
-                <div className="text-center mb-6">
-                    <DoorClosed className="mx-auto mb-3 text-gray-700 dark:text-gray-200" size={44} />
-                    <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-1">Room {roomCode} has closed</h1>
-                    <p className="text-gray-600 dark:text-gray-300">{message}</p>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Its messages have been deleted from the server.
-                    </p>
-                </div>
+        <div className="min-h-screen flex flex-col bg-page">
+            <header className="flex items-center justify-between h-16 px-4 sm:px-8 flex-shrink-0">
+                <span className="text-base font-medium text-ink">Temp Chat</span>
+                <Mode className="" />
+            </header>
+
+            <main className="flex-1 w-full max-w-lg mx-auto px-4 pt-8 pb-12 animate-fadein">
+                <h1 className="text-3xl font-medium tracking-tight text-ink">
+                    Room <span className="font-mono text-2xl">{roomCode}</span> has closed
+                </h1>
+                <p className="mt-2 text-ink-2">{message}</p>
+                <p className="mt-1 text-sm text-ink-3">Its messages have been deleted from the server</p>
 
                 {pinned.length > 0 ? (
-                    <div className="mb-6">
-                        <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                            <Pin size={14} /> Pinned takeaway ({pinned.length})
-                        </h2>
-                        <ul className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
-                            {pinned.map((m) => (
-                                <li key={m.id} className="px-3 py-2 rounded-lg bg-white/60 dark:bg-white/10 text-sm text-gray-800 dark:text-gray-100">
-                                    <div className="text-xs font-semibold text-blue-700 dark:text-blue-300">{m.username}</div>
-                                    {m.text && <div className="break-words whitespace-pre-wrap">{m.text}</div>}
-                                    {m.file && (
-                                        <a href={m.file.url} download={m.file.name}
-                                            className="mt-1 inline-flex items-center gap-1 text-blue-700 dark:text-blue-300 underline">
-                                            <Paperclip size={12} /> {m.file.name}
-                                        </a>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
-                        <button
-                            onClick={downloadTakeaway}
-                            className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                        >
+                    <div className="mt-8">
+                        {/* What survives the room: a slip of paper. */}
+                        <div className="paper-shadow">
+                            <div className="paper-slip rounded-t-lg px-5 pt-5">
+                                <div className="flex items-baseline justify-between gap-4 pb-3 border-b border-dashed border-paper-line font-mono text-xs text-paper-ink-2">
+                                    <span>Pinned takeaway</span>
+                                    <span className="tabular-nums">{pinned.length}</span>
+                                </div>
+                                <ul className="max-h-72 overflow-y-auto custom-scrollbar">
+                                    {pinned.map((m) => (
+                                        <li key={m.id} className="py-3 border-b border-dashed border-paper-line last:border-b-0 text-sm">
+                                            <div className="flex items-baseline justify-between gap-4 font-mono text-xs text-paper-ink-2">
+                                                <span className="truncate">{m.username}</span>
+                                                <span className="tabular-nums flex-shrink-0">{formatPinTime(m.timeStamp)}</span>
+                                            </div>
+                                            {m.text && <div className="mt-1 break-words whitespace-pre-wrap">{m.text}</div>}
+                                            {m.file && (
+                                                <a href={m.file.url} download={m.file.name}
+                                                    className="mt-1 inline-flex items-center gap-1 underline underline-offset-2">
+                                                    <Paperclip size={12} /> {m.file.name}
+                                                </a>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+
+                        <button onClick={downloadTakeaway} className="btn btn-primary btn-lg mt-6">
                             <Download size={16} /> Download takeaway (.txt)
                         </button>
-                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        <p className="mt-2 text-xs leading-5 text-ink-3">
                             This copy exists only in this browser tab. It's gone once you leave this page.
                         </p>
                     </div>
                 ) : (
-                    <p className="mb-6 text-sm text-center text-gray-600 dark:text-gray-300">
-                        Nothing was pinned, so there's nothing to keep.
-                    </p>
+                    <p className="mt-8 text-sm text-ink-2">Nothing was pinned, so there's nothing to keep</p>
                 )}
 
-                <button
-                    onClick={onDone}
-                    className="w-full py-3 rounded-lg bg-gray-700 hover:bg-gray-800 text-white font-semibold"
-                >
+                <button onClick={onDone} className="btn btn-secondary btn-lg mt-4">
                     Back to home
                 </button>
-            </div>
+            </main>
         </div>
     );
 }

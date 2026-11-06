@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MessageCircle, UserPlus, LogIn, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { createRoom, getRoomInfo } from '../services/api';
 import { generateRoomKey, randomToken } from '../lib/crypto';
 import { buildInviteLink, parseInvite } from '../lib/invite';
@@ -12,10 +12,8 @@ import {
     END_POLICY_OPTIONS,
 } from '../config';
 import Mode from './Mode';
+import RoomPreview from './RoomPreview';
 import { formatRemaining } from './Countdown';
-
-const INPUT_CLASS = 'w-full px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white/80 dark:bg-gray-800 text-black dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60';
-const LABEL_CLASS = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
 
 function Home({ onEnterRoom, invite, notice }) {
     const [tab, setTab] = useState(invite ? 'join' : 'create');
@@ -60,7 +58,7 @@ function Home({ onEnterRoom, invite, notice }) {
         e.preventDefault();
         const name = username.trim();
         if (!name) {
-            setError('Please enter a username');
+            setError('Enter your name');
             return;
         }
 
@@ -77,7 +75,7 @@ function Home({ onEnterRoom, invite, notice }) {
                 hostToken: data.hostToken,
             });
         } catch (err) {
-            setError(err.message || 'Network Error. Please try again.');
+            setError(err.message || 'Could not reach the server. Try again');
         } finally {
             setLoading(false);
         }
@@ -91,7 +89,7 @@ function Home({ onEnterRoom, invite, notice }) {
             return;
         }
         if (!name) {
-            setError('Please enter a username');
+            setError('Enter your name');
             return;
         }
         if (roomInfo?.requiresPassword && !joinPassword) {
@@ -109,50 +107,54 @@ function Home({ onEnterRoom, invite, notice }) {
         });
     };
 
-    const tabClass = (name) => `flex-1 py-2 rounded-lg text-sm font-semibold transition ${tab === name
-        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow'
-        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'}`;
+    const tabClass = (name) => `flex-1 h-9 rounded-lg text-sm font-medium transition-colors ${tab === name
+        ? 'bg-surface text-ink border border-line'
+        : 'text-ink-2 hover:text-ink'}`;
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-200 via-indigo-100 to-purple-200 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300">
-            <Mode />
-            <div className="w-full max-w-md p-8 rounded-2xl shadow-xl bg-white/30 dark:bg-white/10 backdrop-blur-lg border border-white/20 animate-fadein">
-                <div className="text-center mb-6">
-                    <MessageCircle className="mx-auto mb-4 text-blue-600 dark:text-blue-400" size={48} />
-                    <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Temp Chat</h1>
-                    <p className="text-gray-600 dark:text-gray-300">Private while it lasts. Gone when it ends.</p>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
-                        <ShieldCheck size={14} /> Messages are end-to-end encrypted in your browser
+        <div className="min-h-screen flex flex-col bg-page">
+            <header className="flex items-center justify-between h-16 px-4 sm:px-8 flex-shrink-0">
+                <span className="text-base font-medium text-ink">Temp Chat</span>
+                <Mode className="" />
+            </header>
+
+            <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-8 pt-4 pb-12 grid gap-8 lg:gap-x-16 lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_auto] lg:content-center animate-fadein">
+                <div className="lg:self-end">
+                    <h1 className="text-4xl lg:text-6xl font-medium tracking-tight leading-[1.08] text-ink">
+                        Private while it lasts.<br />Gone when it ends.
+                    </h1>
+                    <p className="mt-4 flex items-center gap-2 text-sm text-ink-2">
+                        <ShieldCheck size={16} /> Messages are end-to-end encrypted in your browser
                     </p>
                 </div>
 
+                <div className="p-6 rounded-2xl bg-surface border border-line lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:self-center">
                 {error && (
-                    <div className="bg-red-50 dark:bg-red-400/20 border border-red-300 dark:border-red-500 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg mb-4">
+                    <div className="bg-negative-soft text-negative text-sm px-3 py-2 rounded-lg mb-4" role="alert">
                         {error}
                     </div>
                 )}
 
                 {notice && !error && (
-                    <div className="bg-blue-50 dark:bg-blue-400/20 border border-blue-300 dark:border-blue-500 text-blue-700 dark:text-blue-200 px-4 py-3 rounded-lg mb-4">
+                    <div className="bg-raised text-ink-2 text-sm px-3 py-2 rounded-lg mb-4" role="status">
                         {notice}
                     </div>
                 )}
 
-                <div className="flex gap-1 p-1 mb-5 rounded-xl bg-white/40 dark:bg-white/5">
+                <div className="flex gap-1 p-1 mb-5 rounded-xl bg-raised">
                     <button type="button" className={tabClass('create')} onClick={() => switchTab('create')}>Create room</button>
                     <button type="button" className={tabClass('join')} onClick={() => switchTab('join')}>Join room</button>
                 </div>
 
                 <div className="mb-4">
-                    <label className={LABEL_CLASS} htmlFor="username">Your name</label>
+                    <label className="field-label" htmlFor="username">Your name</label>
                     <input
                         id="username"
                         type="text"
-                        placeholder="Enter your username"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         maxLength={USERNAME_MAX_LENGTH}
-                        className={INPUT_CLASS}
+                        className="field"
                         disabled={loading}
                     />
                 </div>
@@ -161,12 +163,12 @@ function Home({ onEnterRoom, invite, notice }) {
                     <form onSubmit={handleCreate} className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label className={LABEL_CLASS} htmlFor="lifetime">Room lasts</label>
+                                <label className="field-label" htmlFor="lifetime">Room lasts</label>
                                 <select
                                     id="lifetime"
                                     value={lifetimeMinutes}
                                     onChange={(e) => setLifetimeMinutes(Number(e.target.value))}
-                                    className={INPUT_CLASS}
+                                    className="field"
                                     disabled={loading}
                                 >
                                     {LIFETIME_OPTIONS.map((o) => (
@@ -175,12 +177,12 @@ function Home({ onEnterRoom, invite, notice }) {
                                 </select>
                             </div>
                             <div>
-                                <label className={LABEL_CLASS} htmlFor="endPolicy">Also close</label>
+                                <label className="field-label" htmlFor="endPolicy">Room closes</label>
                                 <select
                                     id="endPolicy"
                                     value={endPolicy}
                                     onChange={(e) => setEndPolicy(e.target.value)}
-                                    className={INPUT_CLASS}
+                                    className="field"
                                     disabled={loading}
                                 >
                                     {END_POLICY_OPTIONS.map((o) => (
@@ -191,60 +193,54 @@ function Home({ onEnterRoom, invite, notice }) {
                         </div>
 
                         <div>
-                            <label className={LABEL_CLASS} htmlFor="createPassword">Password (optional)</label>
+                            <label className="field-label" htmlFor="createPassword">Password (optional)</label>
                             <input
                                 id="createPassword"
                                 type="password"
                                 autoComplete="new-password"
-                                placeholder="Leave empty for no password"
                                 value={createPassword}
                                 onChange={(e) => setCreatePassword(e.target.value)}
                                 maxLength={PASSWORD_MAX_LENGTH}
-                                className={INPUT_CLASS}
+                                className="field"
                                 disabled={loading}
                             />
                         </div>
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                            <UserPlus size={20} />
+                        <button type="submit" disabled={loading} className="btn btn-primary btn-lg">
                             {loading ? 'Creating...' : 'Create room'}
                         </button>
                     </form>
                 ) : (
                     <form onSubmit={handleJoin} className="space-y-4">
                         <div>
-                            <label className={LABEL_CLASS} htmlFor="invite">Invite link</label>
+                            <label className="field-label" htmlFor="invite">Invite link</label>
                             <input
                                 id="invite"
                                 type="text"
-                                placeholder="Paste the invite link you were sent"
+                                placeholder="Paste invite link"
                                 value={inviteText}
                                 onChange={(e) => setInviteText(e.target.value)}
-                                className={INPUT_CLASS}
+                                className="field"
                                 autoComplete="off"
                                 spellCheck={false}
                             />
                             {inviteText && !parsedInvite && (
-                                <p className="mt-1 text-xs text-red-600 dark:text-red-300">That doesn't look like a full invite link.</p>
+                                <p className="mt-1 text-xs text-negative">That doesn't look like a full invite link</p>
                             )}
                             {roomInfo && (
-                                <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                                <p className="mt-1 text-xs text-ink-2">
                                     Room {roomInfo.roomCode} · closes in {formatRemaining(new Date(roomInfo.expiresAt) - Date.now())}
                                     {roomInfo.locked && ' · locked by the host'}
                                 </p>
                             )}
                             {lookupError && (
-                                <p className="mt-1 text-xs text-red-600 dark:text-red-300">{lookupError}</p>
+                                <p className="mt-1 text-xs text-negative">{lookupError}</p>
                             )}
                         </div>
 
                         {roomInfo?.requiresPassword && (
                             <div>
-                                <label className={LABEL_CLASS} htmlFor="joinPassword">Room password</label>
+                                <label className="field-label" htmlFor="joinPassword">Room password</label>
                                 <input
                                     id="joinPassword"
                                     type="password"
@@ -252,7 +248,7 @@ function Home({ onEnterRoom, invite, notice }) {
                                     value={joinPassword}
                                     onChange={(e) => setJoinPassword(e.target.value)}
                                     maxLength={PASSWORD_MAX_LENGTH}
-                                    className={INPUT_CLASS}
+                                    className="field"
                                 />
                             </div>
                         )}
@@ -260,14 +256,16 @@ function Home({ onEnterRoom, invite, notice }) {
                         <button
                             type="submit"
                             disabled={!parsedInvite || !!lookupError || roomInfo?.locked}
-                            className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2 disabled:opacity-50"
+                            className="btn btn-primary btn-lg"
                         >
-                            <LogIn size={20} />
                             Join room
                         </button>
                     </form>
                 )}
-            </div>
+                </div>
+
+                <RoomPreview className="lg:col-start-1 lg:row-start-2 lg:self-start" />
+            </main>
         </div>
     );
 }

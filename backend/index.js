@@ -39,6 +39,11 @@ connectDB();
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: '10kb' }));
 
+// Answered without touching the database, for keep-awake pings.
+app.get('/api/health', (req, res) => {
+  res.json({ success: true });
+});
+
 app.use('/api/rooms', roomRoutes);
 
 socketHandler(io);

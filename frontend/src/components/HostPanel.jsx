@@ -6,8 +6,8 @@ import { useSocket } from '../context/SocketContext';
 import { SLOW_MODE_OPTIONS, EXTEND_OPTIONS_MINUTES, END_POLICY_OPTIONS } from '../config';
 
 const SECTION = 'space-y-2';
-const HEADING = 'text-sm font-semibold text-gray-700 dark:text-gray-200';
-const NOTE = 'text-xs text-gray-500 dark:text-gray-400';
+const HEADING = 'text-sm font-medium text-ink';
+const NOTE = 'text-xs leading-5 text-ink-3';
 
 function HostPanel({ onClose }) {
     const { room, updateSettings, extendRoom } = useSocket();
@@ -22,7 +22,7 @@ function HostPanel({ onClose }) {
                     <div className={HEADING}>Access</div>
                     <button
                         onClick={() => updateSettings({ locked: !room.locked })}
-                        className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg font-medium text-white ${room.locked ? 'bg-amber-600 hover:bg-amber-700' : 'bg-gray-600 hover:bg-gray-700'}`}
+                        className="btn btn-secondary w-full"
                     >
                         {room.locked ? <LockOpen size={16} /> : <Lock size={16} />}
                         {room.locked ? 'Unlock room' : 'Lock room'}
@@ -40,7 +40,7 @@ function HostPanel({ onClose }) {
                         id="slowMode"
                         value={room.slowModeSeconds}
                         onChange={(e) => updateSettings({ slowModeSeconds: Number(e.target.value) })}
-                        className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100"
+                        className="field h-9"
                     >
                         {SLOW_MODE_OPTIONS.map((o) => (
                             <option key={o.seconds} value={o.seconds}>{o.label}</option>
@@ -57,7 +57,7 @@ function HostPanel({ onClose }) {
                         {EXTEND_OPTIONS_MINUTES.map((minutes) => (
                             <button key={minutes}
                                 onClick={() => extendRoom(minutes)}
-                                className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium">
+                                className="btn btn-secondary flex-1">
                                 +{minutes >= 60 ? `${minutes / 60} hour` : `${minutes} min`}
                             </button>
                         ))}
@@ -67,7 +67,7 @@ function HostPanel({ onClose }) {
                         {policy && ` It also closes: ${policy.label.toLowerCase()}.`}
                     </p>
                 </div>
-                <p className={NOTE}>To end the room for everyone, use the red button in the top bar.</p>
+                <p className={NOTE}>To end the room for everyone, use Leave or End room</p>
             </div>
         </Modal>
     );

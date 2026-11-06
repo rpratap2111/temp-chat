@@ -41,6 +41,7 @@ Override it per machine in a gitignored `frontend/.env.development.local`.
 | `VITE_URL`    | Allowed browser origin(s) for CORS, comma-separated                  |
 | `PORT`        | Port to listen on (defaults to 4000; hosts usually set this)         |
 | `TRUST_PROXY` | Set to `1` behind a proxy such as Render so rate limits see real IPs |
+| `DNS_SERVERS` | Optional DNS servers for `mongodb+srv://` lookups, comma-separated, if startup fails with `querySrv ECONNREFUSED` |
 
 On startup the server syncs MongoDB indexes to the schemas, which also removes
 indexes the schemas no longer declare.
@@ -94,6 +95,16 @@ indexes the schemas no longer declare.
   mode, and delete any message. Everyone can delete their own messages.
 - The server rate-limits messages, room creation, room lookups and failed
   password attempts.
+
+## Keeping the backend awake
+
+Render's free tier sleeps after 15 idle minutes, and the next request can take
+half a minute or more. Two pings to `/api/health` work around that:
+
+- The frontend pings on load and every 10 minutes while a tab is open.
+- `.github/workflows/keep-awake.yml` pings every 14 minutes when nobody is on
+  the site. GitHub can delay scheduled runs, and it pauses them after 60 days
+  without repository activity.
 
 ## Known limits
 

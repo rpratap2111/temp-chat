@@ -27,11 +27,11 @@ function Mode({ className = 'absolute top-4 right-4' }) {
     return (
         <button
             onClick={() => setIsDark((dark) => !dark)}
-            className={`${className} p-2 bg-white/40 dark:bg-black/30 rounded-full lg:backdrop-blur-md shadow-md hover:scale-105 transition`}
-            title="Toggle Theme"
+            className={`btn btn-ghost btn-icon ${className}`}
+            title="Toggle theme"
             aria-label="Toggle theme"
         >
-            {isDark ? <Sun className="text-yellow-400" /> : <Moon className="text-gray-700" />}
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
         </button>
     );
 }

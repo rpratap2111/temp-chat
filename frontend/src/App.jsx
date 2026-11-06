@@ -5,6 +5,7 @@ import ClosedRoom from './components/ClosedRoom';
 import { useSocket } from './context/SocketContext';
 import { loadSession, saveSession, clearSession } from './lib/session';
 import { parseInvite } from './lib/invite';
+import { pingServer } from './services/api';
 
 // Reads an invite from the address bar, then strips the key from it so it does
 // not linger in screenshots, screen shares or browser history.
@@ -18,6 +19,10 @@ function takeInviteFromUrl() {
 
 const initialInvite = takeInviteFromUrl();
 
+// The host sleeps after 15 idle minutes. Pinging on load starts waking it while
+// the visitor is still filling in the form, and repeats while the tab is open.
+const PING_INTERVAL_MS = 10 * 60 * 1000;
+
 function App() {
   const { resetRoomState } = useSocket();
   const [session, setSession] = useState(() => (initialInvite ? null : loadSession()));
@@ -26,6 +31,12 @@ function App() {
   // Shown on the home screen after the user is sent back, e.g. "wrong password".
   const [notice, setNotice] = useState('');
   const [closedInfo, setClosedInfo] = useState(null);
+
+  useEffect(() => {
+    pingServer();
+    const timer = setInterval(pingServer, PING_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, []);
 
   // An invite link opened in a tab that already has the app loaded only changes
   // the URL fragment, which does not reload the page.
@@ -74,7 +85,8 @@ function App() {
   }, [resetRoomState]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    // Clipped so that a screen rising into place can't flash a scrollbar.
+    <div className="min-h-screen bg-page overflow-clip">
       {view === 'room' && session && (
         <Room session={session} onLeave={goHome} onClosed={showClosed} />
       )}

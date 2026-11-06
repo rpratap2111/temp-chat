@@ -49,6 +49,7 @@ function toClientMessage(doc, { status = 'sent', clientId } = {}) {
 function roomInfo(rCode, settings) {
   return {
     roomCode: rCode,
+    createdAt: settings.createdAt,
     expiresAt: settings.expiresAt,
     locked: settings.locked,
     slowModeSeconds: settings.slowModeSeconds,

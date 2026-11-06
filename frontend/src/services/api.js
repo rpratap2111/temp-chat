@@ -9,7 +9,7 @@ const api = axios.create({
 });
 
 const errorMessage = (error) =>
-  error.response?.data?.message || 'Network Error. Please try again.';
+  error.response?.data?.message || 'Could not reach the server. Try again';
 
 // Creates a room. The server picks the code and returns the host's secret token.
 export const createRoom = async ({ lifetimeMinutes, endPolicy, password }) => {
@@ -31,3 +31,6 @@ export const getRoomInfo = async (roomCode) => {
     throw new Error(errorMessage(error));
   }
 };
+
+// Wakes the backend and keeps it awake. A failed ping doesn't matter here.
+export const pingServer = () => api.get('/health').catch(() => {});

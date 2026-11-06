@@ -7,25 +7,21 @@ function typingText(names) {
     return `${names.length} people are typing`;
 }
 
-// Three bouncing dots.
-export function TypingDots({ size = 'md', className = '' }) {
-    const dot = size === 'sm' ? 'h-1.5 w-1.5' : 'h-2 w-2';
+// Three dots that light up in turn.
+export function TypingDots({ className = '' }) {
+    const dot = 'typing-dot h-1 w-1 rounded-full bg-current';
     return (
         <span className={`inline-flex items-center gap-1 ${className}`} aria-hidden="true">
-            <span className={`typing-dot rounded-full bg-current ${dot}`} />
-            <span className={`typing-dot rounded-full bg-current ${dot}`} />
-            <span className={`typing-dot rounded-full bg-current ${dot}`} />
+            <span className={dot} />
+            <span className={dot} />
+            <span className={dot} />
         </span>
     );
 }
 
-// "Alice is typing…" with the ellipsis dots appearing one after another.
 export function TypingLabel({ names, className = '' }) {
     if (!names.length) return null;
     return (
-        <span className={`inline-flex items-baseline animate-notice-in ${className}`} aria-live="polite">
-            <span className="truncate">{typingText(names)}</span>
-            <span className="typing-ellipsis" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>
-        </span>
+        <span className={`truncate ${className}`} aria-live="polite">{typingText(names)}</span>
     );
 }

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Users, Crown, MicOff, Mic, UserX } from 'lucide-react';
+import { Crown, MicOff, Mic, UserX } from 'lucide-react';
 import { useSocket } from '../context/SocketContext';
+import Avatar from './Avatar';
 
 // People in the room. Renders as a fixed-width side panel on desktop, or fills
 // its container when `isMobile` is set (inside the mobile popover).
@@ -15,76 +16,57 @@ function UsersSidebar({ isMobile = false }) {
     };
 
     return (
-        <div className={isMobile
-            ? 'w-full'
-            : `w-64 m-4 ml-0 rounded-2xl shadow-xl
-                bg-gradient-to-br from-white/30 to-white/10
-                dark:from-white/10 dark:to-white/5
-                backdrop-blur-xl
-                border border-white/30
-                transition-colors duration-300`}>
-
-            <div className={`p-4 border-b ${isMobile ? 'border-gray-200 dark:border-gray-700' : 'border-white/20'}`}>
-                <div className="flex items-center gap-2 text-gray-800 dark:text-white font-semibold">
-                    <Users size={20} />
-                    People ({users.length})
-                </div>
+        <div className={isMobile ? 'w-full' : 'w-64 flex-shrink-0 h-full flex flex-col border-l border-line bg-surface'}>
+            <div className="flex items-center justify-between h-12 px-4 flex-shrink-0 border-b border-line">
+                <span className="text-sm font-medium text-ink">People</span>
+                <span className="font-mono text-xs tabular-nums text-ink-3">{users.length}</span>
             </div>
 
-            <div className={`p-4 space-y-3 overflow-y-auto custom-scrollbar ${isMobile ? 'max-h-72' : 'max-h-[calc(100vh-160px)]'}`}>
+            <div className={`p-2 space-y-0.5 overflow-y-auto custom-scrollbar ${isMobile ? 'max-h-72' : 'flex-1 min-h-0'}`}>
                 {users.map((user) => (
-                    <div
-                        key={user.username}
-                        className={`flex items-center gap-3 p-2 rounded-xl
-                            bg-white/40 dark:bg-white/5
-                            border border-white/20 shadow-inner ${user.online ? '' : 'opacity-60'}`}
-                    >
+                    <div key={user.username} className={`flex items-center gap-2 min-h-12 px-2 py-1 rounded-lg ${user.online ? '' : 'opacity-60'}`}>
                         <div className="relative flex-shrink-0">
-                            <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow">
-                                {user.username.charAt(0).toUpperCase()}
-                            </div>
+                            <Avatar name={user.username} />
                             <span
-                                className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 ${user.online ? 'bg-green-500' : 'bg-gray-400'}`}
+                                className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface ${user.online ? 'bg-positive' : 'bg-ink-3'}`}
                                 title={user.online ? 'Online' : 'Reconnecting'}
                             />
                         </div>
                         <div className="min-w-0 flex-1">
-                            <div className="font-medium text-gray-800 dark:text-white truncate flex items-center gap-1">
+                            <div className="text-sm text-ink truncate">
                                 {user.username}
-                                {user.username === me?.username && <span className="text-xs text-gray-500">(you)</span>}
+                                {user.username === me?.username && <span className="text-ink-3"> (you)</span>}
                             </div>
-                            <div className="flex items-center gap-2 text-xs">
-                                {user.isHost && (
-                                    <span className="inline-flex items-center gap-0.5 text-blue-500 font-semibold">
-                                        <Crown size={12} /> Host
-                                    </span>
-                                )}
-                                {user.muted && (
-                                    <span className="inline-flex items-center gap-0.5 text-red-500">
-                                        <MicOff size={12} /> Muted
-                                    </span>
-                                )}
-                                {!user.online && <span className="text-gray-500">Reconnecting…</span>}
-                            </div>
+                            {(user.isHost || user.muted || !user.online) && (
+                                <div className="flex items-center gap-2 text-xs text-ink-3">
+                                    {user.isHost && (
+                                        <span className="inline-flex items-center gap-1"><Crown size={12} /> Host</span>
+                                    )}
+                                    {user.muted && (
+                                        <span className="inline-flex items-center gap-1 text-negative"><MicOff size={12} /> Muted</span>
+                                    )}
+                                    {!user.online && <span>Reconnecting…</span>}
+                                </div>
+                            )}
                         </div>
 
                         {me?.isHost && !user.isHost && (
-                            <div className="flex gap-1 flex-shrink-0">
+                            <div className="flex flex-shrink-0">
                                 <button
                                     onClick={() => setMuted(user.username, !user.muted)}
-                                    className="p-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-white/10"
+                                    className="btn-icon-sm"
                                     aria-label={user.muted ? `Unmute ${user.username}` : `Mute ${user.username}`}
                                     title={user.muted ? 'Unmute' : 'Mute'}
                                 >
-                                    {user.muted ? <Mic size={14} /> : <MicOff size={14} />}
+                                    {user.muted ? <Mic size={16} /> : <MicOff size={16} />}
                                 </button>
                                 <button
                                     onClick={() => handleKick(user.username)}
-                                    className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    className="btn-icon-sm hover:text-negative"
                                     aria-label={`Remove ${user.username}`}
                                     title="Remove from room"
                                 >
-                                    <UserX size={14} />
+                                    <UserX size={16} />
                                 </button>
                             </div>
                         )}

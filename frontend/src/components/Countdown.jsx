@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Timer } from 'lucide-react';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -30,12 +29,9 @@ function Countdown({ expiresAt }) {
 
     return (
         <span
-            className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full tabular-nums ${urgent
-                ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300'
-                : 'bg-white/60 text-gray-700 dark:bg-white/10 dark:text-gray-200'}`}
+            className={`font-mono text-xs tabular-nums ${urgent ? 'text-negative' : 'text-ink-2'}`}
             title="Time until this room and its messages are deleted"
         >
-            <Timer size={12} />
             {formatRemaining(remaining)}
         </span>
     );

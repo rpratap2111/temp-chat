@@ -25,30 +25,28 @@ function LeaveDialog({ endPolicy, candidates, onLeave, onEnd, onClose }) {
         <Modal title={canLeave ? 'Leave or end the room?' : 'End the room?'} onClose={onClose}>
             <div className="space-y-3">
                 {canLeave && (
-                    <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div className="rounded-xl border border-line overflow-hidden">
                         <button
                             onClick={() => onLeave(newHost || undefined)}
-                            className="w-full flex items-start gap-3 p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"
+                            className="w-full flex items-start gap-3 p-4 text-left hover:bg-raised transition-colors"
                         >
-                            <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
-                                <LogOut size={18} />
-                            </span>
+                            <LogOut size={16} className="mt-0.5 text-ink-2" />
                             <span>
-                                <span className="block font-semibold text-gray-900 dark:text-white">
+                                <span className="block text-sm font-medium text-ink">
                                     {newHost ? `Leave and make ${newHost} host` : 'Leave'}
                                 </span>
-                                <span className="block text-sm text-gray-600 dark:text-gray-300">{leaveText}</span>
+                                <span className="block text-sm text-ink-2">{leaveText}</span>
                             </span>
                         </button>
 
                         {candidates.length > 0 && (
-                            <label className="flex items-center gap-2 px-4 py-2.5 text-sm border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 text-gray-700 dark:text-gray-200">
-                                <Crown size={15} className="text-amber-500 flex-shrink-0" />
+                            <label className="flex items-center gap-2 px-4 py-2 text-sm border-t border-line text-ink-2">
+                                <Crown size={16} />
                                 <span className="flex-shrink-0">New host</span>
                                 <select
                                     value={newHost}
                                     onChange={(e) => setNewHost(e.target.value)}
-                                    className="ml-auto min-w-0 max-w-[60%] px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                                    className="field h-9 ml-auto min-w-0 w-auto max-w-[60%]"
                                     aria-label="Who becomes host"
                                 >
                                     {!mustHandOver && <option value="">No one</option>}
@@ -63,27 +61,24 @@ function LeaveDialog({ endPolicy, candidates, onLeave, onEnd, onClose }) {
 
                 <button
                     onClick={onEnd}
-                    className="w-full flex items-start gap-3 p-4 rounded-xl text-left border border-red-200 bg-red-50 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:hover:bg-red-500/20 transition"
+                    className="w-full flex items-start gap-3 p-4 rounded-xl text-left border border-line hover:bg-negative-soft transition-colors"
                 >
-                    <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-red-600 text-white">
-                        <Power size={18} />
-                    </span>
+                    <Power size={16} className="mt-0.5 text-negative" />
                     <span>
-                        <span className="block font-semibold text-red-700 dark:text-red-300">End room for everyone</span>
-                        <span className="block text-sm text-red-700/80 dark:text-red-200/80">
+                        <span className="block text-sm font-medium text-negative">End room for everyone</span>
+                        <span className="block text-sm text-ink-2">
                             Closes the chat now and deletes every message. Everyone sees the pinned takeaway.
                         </span>
                     </span>
                 </button>
 
                 {!canLeave && (
-                    <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-                        Nobody else is online to take over as host, so leaving would end the room.
+                    <p className="text-xs text-center text-ink-3">
+                        Nobody else is online to take over as host, so leaving would end the room
                     </p>
                 )}
 
-                <button onClick={onClose}
-                    className="w-full py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700">
+                <button onClick={onClose} className="btn btn-ghost w-full">
                     Cancel
                 </button>
             </div>

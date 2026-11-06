@@ -9,7 +9,7 @@ import {
     inviteMessage, whatsappShareUrl, telegramShareUrl, canNativeShare, isTouchDevice,
 } from '../lib/share';
 
-const SHARE_BUTTON = 'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-white text-sm font-semibold shadow-sm transition hover:brightness-110 active:scale-95';
+const SHARE_BUTTON = 'btn btn-secondary flex-1';
 
 function InviteModal({ session, requiresPassword, onClose }) {
     const { room } = useSocket();
@@ -66,17 +66,17 @@ function InviteModal({ session, requiresPassword, onClose }) {
 
                 <div className="flex gap-2">
                     <button onClick={() => openShare(whatsappShareUrl(message, link))}
-                        className={`${SHARE_BUTTON} bg-[#25D366]`} aria-label="Share to WhatsApp">
-                        <WhatsAppIcon size={19} /> WhatsApp
+                        className={SHARE_BUTTON} aria-label="Share to WhatsApp">
+                        <WhatsAppIcon size={16} /> WhatsApp
                     </button>
                     <button onClick={() => openShare(telegramShareUrl(message, link))}
-                        className={`${SHARE_BUTTON} bg-[#229ED9]`} aria-label="Share to Telegram">
-                        <TelegramIcon size={19} /> Telegram
+                        className={SHARE_BUTTON} aria-label="Share to Telegram">
+                        <TelegramIcon size={16} /> Telegram
                     </button>
                     {showNativeShare && (
                         <button onClick={nativeShare}
-                            className={`${SHARE_BUTTON} flex-none bg-gray-700 dark:bg-gray-600`} aria-label="More ways to share">
-                            <Share2 size={17} /> More
+                            className="btn btn-secondary flex-none" aria-label="More ways to share">
+                            <Share2 size={16} /> More
                         </button>
                     )}
                 </div>
@@ -86,18 +86,18 @@ function InviteModal({ session, requiresPassword, onClose }) {
                         readOnly
                         value={link}
                         onFocus={(e) => e.target.select()}
-                        className="flex-1 min-w-0 px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200"
+                        className="field h-9 flex-1 min-w-0 font-mono text-xs"
                         aria-label="Invite link"
                     />
                     <button onClick={copy}
-                        className="flex items-center gap-1 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium">
+                        className="btn btn-primary">
                         {copied ? <Check size={16} /> : <Copy size={16} />}
                         {copied ? 'Copied' : 'Copy'}
                     </button>
                 </div>
 
-                <p className="text-xs text-gray-600 dark:text-gray-300 flex gap-2">
-                    <KeyRound size={14} className="flex-shrink-0 mt-0.5" />
+                <p className="text-xs leading-5 text-ink-2 flex gap-2">
+                    <KeyRound size={16} className="mt-0.5 text-ink-3" />
                     <span>
                         The link contains the room's encryption key. Anyone with it can read this chat,
                         so share it only with people you trust.
