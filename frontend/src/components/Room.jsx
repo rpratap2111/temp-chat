@@ -233,7 +233,7 @@ function Room({ session, onLeave, onClosed }) {
         </div>
       )}
 
-      <div className="flex-1 flex max-w-[1440px] mx-auto w-full animate-fadein min-h-0 overflow-hidden">
+      <div className="flex-1 flex w-full animate-fadein min-h-0 overflow-hidden">
         <ChatArea />
         <div className="hidden lg:flex">
           <UsersSidebar />

@@ -13,12 +13,15 @@ import { formatRemaining } from './Countdown';
 const GROUP_WINDOW_MS = 3 * 60 * 1000;
 
 
-// System notices are written by the server for everyone. A few read better
-// in the second person for the person they are about.
+// System notices are written by the server for everyone, as full sentences.
+// They show as short labels, and a few read better for the person they are about.
 function personalizeNotice(text, myName) {
     if (myName && text === `${myName} is now the host.`) return 'You are now the host';
-    return text;
+    return text.replace(/\.$/, '');
 }
+
+// The name in a "<name> joined the chat." notice, if this is one.
+const joinedName = (text) => text.match(/^(.+) joined the chat\.$/)?.[1];
 
 const isHostNoticeFor = (text, myName) => !!myName && text === `${myName} is now the host.`;
 
@@ -115,6 +118,26 @@ function ReplyQuote({ replyTo, isSelf, exists }) {
     );
 }
 
+// Someone arriving is an event in a room this short-lived, so it gets the
+// person's own avatar and colour rather than a line of grey text.
+function JoinNotice({ name, isMe, msg }) {
+    return (
+        <div className={`flex items-center gap-3 my-4 ${msg.isNew ? 'animate-join-in' : ''}`}>
+            <span className="h-px flex-1 bg-line" />
+            <div className="flex items-center gap-2 h-11 pl-1.5 pr-3 rounded-xl bg-surface border border-line">
+                <Avatar name={name} />
+                <span className="text-sm text-ink-2">
+                    <span className={`font-medium ${NAME_COLORS[colorIndex(name)]}`}>{isMe ? 'You' : name}</span> joined
+                </span>
+                {msg.timeStamp && (
+                    <span className="font-mono text-xs tabular-nums text-ink-3">{formatTime(msg.timeStamp)}</span>
+                )}
+            </div>
+            <span className="h-px flex-1 bg-line" />
+        </div>
+    );
+}
+
 // Small floating toolbar beside a bubble.
 function Actions({ msg, isSelf, canDelete, onReply, onPin, onDelete, visible }) {
     return (
@@ -164,7 +187,7 @@ function MessageList({ messages, onReply, replyingToId }) {
     return (
         <>
             {!hasUserMessages && (
-                <div className="flex flex-col items-center text-center py-12 px-6 animate-notice-in">
+                <div className="flex flex-col items-center text-center pt-12 pb-6 px-6 animate-notice-in">
                     <ShieldCheck size={16} className="mb-2 text-ink-3" />
                     <div className="text-base font-medium text-ink">Say hi</div>
                     <div className="mt-1 max-w-xs text-sm text-ink-2">
@@ -177,6 +200,10 @@ function MessageList({ messages, onReply, replyingToId }) {
                 const key = msg.clientId || msg.id;
 
                 if (msg.messageType === 'system') {
+                    const joined = joinedName(msg.text);
+                    if (joined) {
+                        return <JoinNotice key={key} name={joined} isMe={joined === me?.username} msg={msg} />;
+                    }
                     return (
                         <div key={key} className={`flex justify-center my-3 ${msg.isNew ? 'animate-notice-in' : ''}`}>
                             <div className={`inline-flex items-center gap-1 text-xs ${isHostNoticeFor(msg.text, me?.username) ? 'text-ink' : 'text-ink-3'}`}>
