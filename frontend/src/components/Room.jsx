@@ -31,6 +31,7 @@ function Room({ session, onLeave, onClosed }) {
   const [becameHost, setBecameHost] = useState(false);
   const menuRef = useRef(null);
   const usersRef = useRef(null);
+  const endedRoomRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +47,15 @@ function Room({ session, onLeave, onClosed }) {
         });
         socket.on('kicked', (data) => onLeave(data.message));
         socket.on('roomClosed', (data) => {
-          onClosed({ message: data.message, roomCode: session.roomCode, pinned: getPinnedMessages() });
+          const pinned = getPinnedMessages();
+          // A host who ended the room already knows why it closed, so they only
+          // need the closed screen if there is something on it to keep.
+          if (endedRoomRef.current && pinned.length === 0) {
+            onLeave('Room closed. Its messages have been deleted.');
+            return;
+          }
+          const message = endedRoomRef.current ? 'You closed the room' : data.message;
+          onClosed({ message, roomCode: session.roomCode, pinned });
         });
         // Anything else (e.g. a message that failed to send) is shown in place.
         socket.on('error', (data) => setError(data.message));
@@ -98,6 +107,7 @@ function Room({ session, onLeave, onClosed }) {
   // The server closes the room and sends everyone, including us, to the takeaway.
   const endRoomForEveryone = () => {
     setShowLeaveDialog(false);
+    endedRoomRef.current = true;
     closeRoom();
   };
 
