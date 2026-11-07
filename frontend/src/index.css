@@ -289,6 +289,17 @@
 }
 .animate-notice-in { animation: fade-in 180ms var(--ease); }
 
+/* Theme change: the new theme is revealed by Mode.jsx, so the browser's default
+   crossfade is turned off and the old page stays still underneath. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+.theme-switching * {
+  transition: none !important;
+}
+
 /* Someone is typing right now, so this one is allowed to keep moving. */
 @keyframes typing-dot {
   0%, 60%, 100% { opacity: 0.35; }
